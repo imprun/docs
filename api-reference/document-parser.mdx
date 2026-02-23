@@ -1,0 +1,53 @@
+---
+title: "등기부등본 PDF 파서"
+description: "건물·토지·집합건물 등기부등본 PDF를 구조화된 JSON으로 변환"
+---
+
+## POST /v1/document-parser/registry
+
+등기부등본 PDF 파일을 업로드하면 문서 유형을 자동 판별하여 구조화된 JSON으로 변환합니다.
+
+### 지원 문서 유형
+
+- **건물** 등기부등본
+- **토지** 등기부등본
+- **집합건물** 등기부등본 (아파트, 오피스텔 등)
+
+### 요청
+
+```bash
+POST https://prod.fn.imprun.dev/v1/document-parser/registry
+Authorization: Bearer {keyId}.{secret}
+Content-Type: multipart/form-data
+```
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| `file` | file | O | 등기부등본 PDF 파일 |
+
+### 요청 예제
+
+```bash
+curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
+  -H "Authorization: Bearer YOUR_KEY_ID.YOUR_SECRET" \
+  -F "file=@등기부등본.pdf"
+```
+
+### 응답
+
+{/* TODO: 등기 파서 프로젝트에서 실제 응답 스키마로 채워주세요 */}
+
+```json
+{
+  // 실제 응답 스키마는 등기 파서 프로젝트에서 작성 예정
+}
+```
+
+### 에러
+
+| HTTP 코드 | 의미 |
+|-----------|------|
+| `400` | PDF 파일이 아니거나 파싱 불가 |
+| `401` | 인증 실패 |
+| `403` | 잔액 부족 |
+| `413` | 파일 크기 초과 |

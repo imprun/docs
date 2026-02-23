@@ -1,33 +1,42 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: "API Reference"
+description: "imprun.dev API 엔드포인트 레퍼런스"
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Base URL
 
-## Welcome
+```
+https://prod.fn.imprun.dev
+```
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+## 인증
+
+모든 요청에 `Authorization` 헤더가 필요합니다:
+
+```
+Authorization: Bearer {keyId}.{secret}
+```
+
+자세한 내용은 [인증 가이드](/authentication)를 참고하세요.
+
+## 공통 에러
+
+| HTTP 코드 | 의미 |
+|-----------|------|
+| `400` | 잘못된 요청 (파라미터 누락 등) |
+| `401` | 인증 실패 |
+| `403` | 잔액 부족 또는 계정 정지 |
+| `413` | 파일 크기 초과 |
+| `500` | 서버 내부 오류 |
+
+## API 목록
+
+### PDF 파싱
 
 <Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
+  title="등기부등본 PDF 파서"
+  icon="file-pdf"
+  href="/api-reference/document-parser"
 >
-  View the OpenAPI specification file
+  건물·토지·집합건물 등기부등본 PDF를 구조화된 JSON으로 변환합니다.
 </Card>
-
-## Authentication
-
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
-
-```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
-```

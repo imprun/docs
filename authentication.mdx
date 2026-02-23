@@ -1,0 +1,44 @@
+---
+title: "인증"
+description: "API 키 발급과 인증 방법"
+---
+
+## API 키
+
+모든 API 요청에는 인증이 필요합니다. [콘솔](https://console.imprun.dev/console/api-keys)에서 API 키를 발급받으세요.
+
+### 키 형식
+
+```
+{keyId}.{secret}
+```
+
+- **keyId** — 32자 hex, 공개 식별자
+- **secret** — 48자 hex, 비밀 값 (서버에는 SHA-256 해시만 저장)
+
+### 인증 헤더
+
+`Authorization` 헤더에 Bearer 토큰으로 전달합니다:
+
+```bash
+curl -H "Authorization: Bearer {keyId}.{secret}" \
+  https://prod.fn.imprun.dev/v1/...
+```
+
+### 에러 응답
+
+| HTTP 코드 | 의미 |
+|-----------|------|
+| `401` | API 키가 없거나 유효하지 않음 |
+| `403` | 잔액 부족 또는 계정 정지 |
+
+## 보안
+
+<Warning>
+  API 키를 클라이언트 사이드 코드(프론트엔드, 모바일 앱)에 포함하지 마세요.
+  항상 서버에서 API를 호출하세요.
+</Warning>
+
+- API 키는 생성 시 **한 번만** 표시됩니다
+- 키가 유출된 경우 콘솔에서 즉시 삭제하고 새 키를 발급하세요
+- 키를 여러 개 발급하여 서비스별로 분리 관리하는 것을 권장합니다
