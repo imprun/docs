@@ -41,7 +41,10 @@
           {
             "group": "PDF 파싱",
             "pages": [
-              "api-reference/document-parser"
+              "api-reference/document-parser",
+              "api-reference/document-parser/land",
+              "api-reference/document-parser/building",
+              "api-reference/document-parser/aggregate-building"
             ]
           }
         ]

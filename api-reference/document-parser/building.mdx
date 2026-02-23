@@ -1,0 +1,172 @@
+---
+title: "건물 등기부등본"
+description: "일반 건물 등기부등본 파싱 결과 스키마"
+---
+
+건물 등기부등본은 `property_type`이 `"building"`인 문서입니다. 건물 구조, 층별 면적, 용도 등 건물 고유 필드를 포함합니다.
+
+## 표제부 (title_info)
+
+건물 등기부등본의 표제부는 **건물의 표시** 테이블과 **층별 면적**을 포함합니다.
+
+```json
+{
+  "title_info": {
+    "property_type": "building",
+    "address": "경상북도 문경시 모전동 285-4",
+    "road_address": "경상북도 문경시 중앙로 123",
+    "structure": "시멘트벽돌조슬래브지붕",
+    "roof_type": "슬래브지붕",
+    "floors": 2,
+    "building_type": "단독주택",
+    "total_floor_area": 198.54,
+    "areas": [
+      { "floor": "1층", "area": 112.32, "is_excluded": false },
+      { "floor": "2층", "area": 86.22, "is_excluded": false }
+    ],
+    "building_entries": [
+      {
+        "display_number": "1",
+        "receipt_date": "2003년 05월 20일",
+        "location_or_number": "경상북도 문경시 모전동 285-4",
+        "building_detail": "시멘트벽돌조슬래브지붕 2층 단독주택\n1층 112.32㎡\n2층 86.22㎡",
+        "cause_and_other": "",
+        "is_cancelled": false
+      }
+    ]
+  }
+}
+```
+
+### 건물 전용 필드
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `road_address` | `string \| null` | 도로명주소 |
+| `structure` | `string \| null` | 건물 구조 (예: `"철근콘크리트구조"`) |
+| `roof_type` | `string \| null` | 지붕 종류 (예: `"슬래브지붕"`, `"경사지붕"`) |
+| `floors` | `integer` | 지상 층수 |
+| `building_type` | `string \| null` | 건물 용도 (예: `"단독주택"`, `"제2종근린생활시설"`) |
+| `total_floor_area` | `float` | 연면적 (㎡) |
+| `areas` | `array` | 층별 면적 목록 |
+| `building_entries` | `array` | 건물의 표시 항목 목록 |
+
+### FloorArea (층별 면적)
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `floor` | `string` | 층 (예: `"1층"`, `"지1층"`, `"옥탑"`) |
+| `area` | `float` | 면적 (㎡) |
+| `is_excluded` | `boolean` | 연면적 산정 제외 여부 |
+
+<Note>
+  `is_excluded`가 `true`인 면적은 `total_floor_area` 계산에서 제외됩니다. 기계실, 옥탑 등이 해당합니다.
+</Note>
+
+### BuildingTitleEntry (건물의 표시)
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `display_number` | `string` | 표시번호 |
+| `receipt_date` | `string` | 접수일자 |
+| `location_or_number` | `string` | 소재지번 또는 건물번호 |
+| `building_detail` | `string` | 건물내역 (구조·용도·면적, 개행 구분) |
+| `cause_and_other` | `string` | 등기원인 및 기타사항 |
+| `is_cancelled` | `boolean` | 말소 여부 |
+
+---
+
+## 갑구·을구
+
+건물 등기부등본의 갑구·을구는 [공통 스키마](/api-reference/document-parser#갑구-section_a)와 동일합니다. 건물 특유의 등기 유형은 다음과 같습니다:
+
+- **건물 증·개축**: 표시변경으로 건물내역이 갱신됨
+- **건물 멸실**: 건물이 철거된 경우 말소
+- **법인 소유**: 법인등록번호로 소유자 식별
+
+---
+
+## 전체 응답 예시
+
+<Accordion title="건물 등기부등본 응답 예시">
+```json
+{
+  "document_type": "registry",
+  "parser_version": "1.4.0",
+  "parsed_at": "2026-02-23T12:00:00+00:00",
+  "data": {
+    "unique_number": "1490-2003-020551",
+    "property_type": "building",
+    "property_address": "경상북도 문경시 모전동 285-4",
+    "title_info": {
+      "property_type": "building",
+      "address": "경상북도 문경시 모전동 285-4",
+      "road_address": "경상북도 문경시 중앙로 123",
+      "structure": "시멘트벽돌조슬래브지붕",
+      "roof_type": "슬래브지붕",
+      "floors": 2,
+      "building_type": "단독주택",
+      "total_floor_area": 198.54,
+      "areas": [
+        { "floor": "1층", "area": 112.32, "is_excluded": false },
+        { "floor": "2층", "area": 86.22, "is_excluded": false }
+      ],
+      "building_entries": [
+        {
+          "display_number": "1",
+          "receipt_date": "2003년 05월 20일",
+          "location_or_number": "경상북도 문경시 모전동 285-4",
+          "building_detail": "시멘트벽돌조슬래브지붕 2층 단독주택\n1층 112.32㎡\n2층 86.22㎡",
+          "cause_and_other": "",
+          "is_cancelled": false
+        }
+      ]
+    },
+    "section_a": [
+      {
+        "rank_number": "1",
+        "purposes": [{ "type": "소유권보존" }],
+        "receipt": { "date": "2003년 06월 10일", "number": "12345호" },
+        "cause": { "text": "보존등기", "date": null },
+        "details": {
+          "owners": [
+            { "name": "이영희", "share": null, "role": "소유자" }
+          ]
+        },
+        "is_cancelled": false
+      }
+    ],
+    "section_b": [
+      {
+        "rank_number": "1",
+        "purposes": [{ "type": "근저당권설정" }],
+        "receipt": { "date": "2003년 06월 10일", "number": "12346호" },
+        "cause": { "text": "설정계약", "date": "2003년 06월 10일" },
+        "details": {
+          "max_claim_amount": 80000000,
+          "debtors": [{ "name": "이영희" }],
+          "mortgagees": [{ "name": "주식회사 하나은행" }]
+        },
+        "is_cancelled": false
+      }
+    ],
+    "trade_lists": [],
+    "major_summary": {
+      "property_type": "건물",
+      "address": "경상북도 문경시 모전동 285-4",
+      "owners": [],
+      "rights": []
+    },
+    "jurisdiction": "대구지방법원 문경등기소",
+    "section_a_count": 1,
+    "section_b_count": 1,
+    "active_section_a_count": 1,
+    "active_section_b_count": 1
+  },
+  "confidence": {
+    "overall": 93,
+    "level": "높음"
+  }
+}
+```
+</Accordion>

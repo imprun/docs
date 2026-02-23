@@ -1,0 +1,284 @@
+---
+title: "집합건물 등기부등본"
+description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 결과 스키마"
+---
+
+집합건물 등기부등본은 `property_type`이 `"aggregate_building"`인 문서입니다. 아파트, 오피스텔, 상가 등 구분소유 건물에 해당하며, **전유부분**과 **대지권** 정보를 포함합니다.
+
+## 표제부 (title_info)
+
+집합건물의 표제부는 1동 건물 정보, 전유부분, 대지권 토지, 대지권 비율의 4개 섹션으로 구성됩니다.
+
+```json
+{
+  "title_info": {
+    "property_type": "aggregate_building",
+    "address": "경기도 고양시 일산동구 백석동 1234",
+    "road_address": "경기도 고양시 일산동구 중앙로 456",
+    "building_name": "백석센트럴 제101동",
+    "structure": "철근콘크리트구조",
+    "roof_type": "슬래브지붕",
+    "floors": 25,
+    "building_type": "아파트",
+    "total_floor_area": 12345.67,
+    "areas": [
+      { "floor": "1층", "area": 456.78, "is_excluded": false },
+      { "floor": "지1층", "area": 890.12, "is_excluded": true }
+    ],
+    "exclusive_area": 84.97,
+    "land_right_ratio": "25455.4분의 67.06",
+    "land_right_area": 25455.4,
+    "exclusive_part_entries": [
+      {
+        "display_number": "1",
+        "receipt_date": "",
+        "building_number": "제15층 제1501호",
+        "building_detail": "철근콘크리트구조 84.97㎡",
+        "cause_and_other": "",
+        "is_cancelled": false
+      }
+    ],
+    "land_right_entries": [
+      {
+        "display_number": "1",
+        "location": "경기도 고양시 일산동구 백석동 1234",
+        "land_type": "대",
+        "area": "25455.4㎡",
+        "cause_and_other": ""
+      }
+    ],
+    "land_right_ratio_entries": [
+      {
+        "display_number": "1",
+        "land_right_type": "1 소유권대지권",
+        "land_right_ratio": "25455.4분의 67.06",
+        "cause_and_other": "",
+        "is_cancelled": false
+      }
+    ],
+    "building_entries": [
+      {
+        "display_number": "1",
+        "receipt_date": "",
+        "location_or_number": "경기도 고양시 일산동구 백석동 1234",
+        "building_detail": "철근콘크리트구조 슬래브지붕 25층 아파트\n1층 456.78㎡\n...",
+        "cause_and_other": "",
+        "is_cancelled": false
+      }
+    ]
+  }
+}
+```
+
+### 집합건물 전용 필드
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `building_name` | `string \| null` | 건물명 (예: `"게토333지식산업센터 제나동"`) |
+| `exclusive_area` | `float \| null` | 전용면적 (㎡) |
+| `land_right_ratio` | `string \| null` | 대지권 비율 (예: `"25455.4분의 67.06"`) |
+| `land_right_area` | `float \| null` | 대지 전체 면적 (㎡) |
+| `exclusive_part_entries` | `array` | 전유부분 항목 |
+| `land_right_entries` | `array` | 대지권 토지 항목 |
+| `land_right_ratio_entries` | `array` | 대지권 비율 항목 |
+
+### 건물과 공유하는 필드
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `road_address` | `string \| null` | 도로명주소 |
+| `structure` | `string \| null` | 건물 구조 |
+| `roof_type` | `string \| null` | 지붕 종류 |
+| `floors` | `integer` | 지상 층수 |
+| `building_type` | `string \| null` | 건물 용도 |
+| `total_floor_area` | `float` | 1동 연면적 (㎡) |
+| `areas` | `array` | 1동 층별 면적 |
+| `building_entries` | `array` | 1동 건물의 표시 항목 |
+
+---
+
+## 전유부분 (ExclusivePartEntry)
+
+해당 호실의 건물 정보입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `display_number` | `string` | 표시번호 |
+| `receipt_date` | `string` | 접수일자 |
+| `building_number` | `string` | 동·호수 (예: `"제15층 제1501호"`) |
+| `building_detail` | `string` | 건물내역 (구조·면적) |
+| `cause_and_other` | `string` | 등기원인 및 기타사항 |
+| `is_cancelled` | `boolean` | 말소 여부 |
+
+---
+
+## 대지권 토지 (LandRightEntry)
+
+집합건물이 위치한 대지 토지 정보입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `display_number` | `string` | 표시번호 |
+| `location` | `string` | 소재지번 |
+| `land_type` | `string` | 지목 (예: `"대"`) |
+| `area` | `string` | 면적 (예: `"25455.4㎡"`) |
+| `cause_and_other` | `string` | 등기원인 및 기타사항 |
+
+---
+
+## 대지권 비율 (LandRightRatioEntry)
+
+해당 호실의 대지 지분 비율입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `display_number` | `string` | 표시번호 |
+| `land_right_type` | `string` | 대지권 종류 (예: `"1 소유권대지권"`) |
+| `land_right_ratio` | `string` | 대지권 비율 (예: `"25455.4분의 67.06"`) |
+| `cause_and_other` | `string` | 등기원인 및 기타사항 |
+| `is_cancelled` | `boolean` | 말소 여부 |
+
+<Note>
+  대지권이 있는 집합건물의 경우, 을구의 근저당권에 별도의 공동담보목록이 없을 수 있습니다.
+  대지권은 전유부분의 처분에 따르므로 별도 등기가 불필요합니다.
+</Note>
+
+---
+
+## 갑구·을구
+
+집합건물 등기부등본의 갑구·을구는 [공통 스키마](/api-reference/document-parser#갑구-section_a)와 동일합니다. 집합건물 특유의 등기 유형은 다음과 같습니다:
+
+- **신탁**: 을구에 신탁 원부 번호가 기재됨
+- **가처분**: 분양권 관련 처분금지 가처분
+- **근저당권부채권압류**: 을구 근저당권에 대한 채권 압류
+
+---
+
+## 전체 응답 예시
+
+<Accordion title="집합건물 등기부등본 응답 예시">
+```json
+{
+  "document_type": "registry",
+  "parser_version": "1.4.0",
+  "parsed_at": "2026-02-23T12:00:00+00:00",
+  "data": {
+    "unique_number": "1345-2003-020551",
+    "property_type": "aggregate_building",
+    "property_address": "경기도 고양시 일산동구 백석동 1234",
+    "title_info": {
+      "property_type": "aggregate_building",
+      "address": "경기도 고양시 일산동구 백석동 1234",
+      "road_address": "경기도 고양시 일산동구 중앙로 456",
+      "building_name": "백석센트럴 제101동",
+      "structure": "철근콘크리트구조",
+      "roof_type": "슬래브지붕",
+      "floors": 25,
+      "building_type": "아파트",
+      "total_floor_area": 12345.67,
+      "areas": [
+        { "floor": "1층", "area": 456.78, "is_excluded": false }
+      ],
+      "exclusive_area": 84.97,
+      "land_right_ratio": "25455.4분의 67.06",
+      "land_right_area": 25455.4,
+      "exclusive_part_entries": [
+        {
+          "display_number": "1",
+          "building_number": "제15층 제1501호",
+          "building_detail": "철근콘크리트구조 84.97㎡",
+          "is_cancelled": false
+        }
+      ],
+      "land_right_entries": [
+        {
+          "display_number": "1",
+          "location": "경기도 고양시 일산동구 백석동 1234",
+          "land_type": "대",
+          "area": "25455.4㎡"
+        }
+      ],
+      "land_right_ratio_entries": [
+        {
+          "display_number": "1",
+          "land_right_type": "1 소유권대지권",
+          "land_right_ratio": "25455.4분의 67.06",
+          "is_cancelled": false
+        }
+      ]
+    },
+    "section_a": [
+      {
+        "rank_number": "1",
+        "purposes": [{ "type": "소유권보존" }],
+        "receipt": { "date": "2004년 03월 15일", "number": "6789호" },
+        "cause": { "text": "보존등기", "date": null },
+        "details": {
+          "owners": [
+            { "name": "박지성", "share": null, "role": "소유자" }
+          ]
+        },
+        "is_cancelled": true,
+        "cancelled_by_rank": "2"
+      },
+      {
+        "rank_number": "2",
+        "purposes": [{ "type": "소유권이전" }],
+        "receipt": { "date": "2010년 07월 20일", "number": "23456호" },
+        "cause": { "text": "매매", "date": "2010년 07월 15일" },
+        "details": {
+          "owners": [
+            { "name": "손흥민", "share": null, "role": "소유자" }
+          ]
+        },
+        "is_cancelled": false
+      }
+    ],
+    "section_b": [
+      {
+        "rank_number": "1",
+        "purposes": [{ "type": "근저당권설정" }],
+        "receipt": { "date": "2010년 07월 20일", "number": "23457호" },
+        "cause": { "text": "설정계약", "date": "2010년 07월 20일" },
+        "details": {
+          "max_claim_amount": 300000000,
+          "debtors": [{ "name": "손흥민" }],
+          "mortgagees": [{ "name": "주식회사 신한은행" }]
+        },
+        "is_cancelled": false
+      }
+    ],
+    "trade_lists": [],
+    "major_summary": {
+      "property_type": "집합건물",
+      "address": "경기도 고양시 일산동구 백석동 1234",
+      "owners": [
+        {
+          "name": "손흥민 (소유자)",
+          "final_share": "단독소유",
+          "rank_number": "2"
+        }
+      ],
+      "rights": [
+        {
+          "rank_number": "1",
+          "registration_purpose": "근저당권설정",
+          "creditor": "주식회사 신한은행",
+          "max_claim_amount": 300000000
+        }
+      ]
+    },
+    "jurisdiction": "의정부지방법원 고양등기소",
+    "section_a_count": 2,
+    "section_b_count": 1,
+    "active_section_a_count": 1,
+    "active_section_b_count": 1
+  },
+  "confidence": {
+    "overall": 94,
+    "level": "높음"
+  }
+}
+```
+</Accordion>

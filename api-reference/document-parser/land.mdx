@@ -1,0 +1,222 @@
+---
+title: "토지 등기부등본"
+description: "토지(임야 포함) 등기부등본 파싱 결과 스키마"
+---
+
+토지 등기부등본은 `property_type`이 `"land"`인 문서입니다. 지목, 면적, 토지의 표시, 매매목록 등 토지 고유 필드를 포함합니다.
+
+## 표제부 (title_info)
+
+토지 등기부등본의 표제부는 **토지의 표시** 테이블을 포함합니다.
+
+```json
+{
+  "title_info": {
+    "property_type": "land",
+    "address": "전라남도 나주시 빛가람동 42-2",
+    "land_type": "전",
+    "land_area": "714㎡",
+    "land_entries": [
+      {
+        "display_number": "1",
+        "receipt_date": "2005년 06월 30일",
+        "location": "전라남도 나주시 빛가람동 42-2",
+        "land_type": "전",
+        "area": "714㎡",
+        "cause_and_other": "나주시빛가람동 42에서 분할",
+        "is_cancelled": false
+      }
+    ]
+  }
+}
+```
+
+### 토지 전용 필드
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `land_type` | `string \| null` | 지목 (전, 답, 대, 임야 등) |
+| `land_area` | `string \| null` | 토지 면적 (예: `"714㎡"`) |
+| `land_entries` | `array` | 토지의 표시 항목 목록 |
+
+### LandTitleEntry (토지의 표시)
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `display_number` | `string` | 표시번호 (예: `"1"`, `"1 (전 2)"`) |
+| `receipt_date` | `string` | 접수일자 |
+| `location` | `string` | 소재지번 |
+| `land_type` | `string` | 지목 |
+| `area` | `string` | 면적 |
+| `cause_and_other` | `string` | 등기원인 및 기타사항 |
+| `is_cancelled` | `boolean` | 말소 여부 |
+
+<Note>
+  `display_number`에 `"(전 2)"`처럼 구번호가 포함될 수 있습니다. 이는 전산화 이전 등기 번호입니다.
+</Note>
+
+---
+
+## 갑구 (section_a)
+
+토지 갑구의 특징:
+
+- **매매목록 참조**: 소유권이전 등기에서 `details.trade_list_number`로 매매목록을 참조합니다
+- **복수 필지 거래**: 하나의 매매로 여러 필지가 이전될 때 매매목록이 생성됩니다
+
+```json
+{
+  "rank_number": "8",
+  "purposes": [
+    { "type": "소유권이전", "target_rank": null }
+  ],
+  "receipt": { "date": "2016년 10월 13일", "number": "33814호" },
+  "cause": { "text": "매매", "date": "2016년 09월 22일" },
+  "details": {
+    "owners": [
+      {
+        "name": "홍길동",
+        "resident_number": "800101-*******",
+        "address": "경상북도 문경시 모전동 123-4",
+        "share": null,
+        "role": "소유자"
+      }
+    ],
+    "claim_amount": null,
+    "trade_list_number": "2016-553"
+  },
+  "is_cancelled": false
+}
+```
+
+---
+
+## 매매목록 (trade_lists)
+
+토지에서 복수 필지를 한 거래로 처리할 때 존재합니다. 갑구 항목의 `details.trade_list_number`와 `list_number`로 연결됩니다.
+
+```json
+{
+  "trade_lists": [
+    {
+      "list_number": "2016-553",
+      "trade_amount": 85000000,
+      "items": [
+        {
+          "serial_number": "1",
+          "property_description": "[토지] 경상북도 문경시 농암면 내서리 733",
+          "rank_number": "8",
+          "registration_cause": "매매",
+          "correction_cause": ""
+        },
+        {
+          "serial_number": "2",
+          "property_description": "[토지] 경상북도 문경시 농암면 내서리 733-1",
+          "rank_number": "8",
+          "registration_cause": "매매",
+          "correction_cause": ""
+        }
+      ]
+    }
+  ]
+}
+```
+
+### TradeList
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `list_number` | `string` | 목록번호 (예: `"2016-553"`) |
+| `trade_amount` | `integer \| null` | 거래가액 (원) |
+| `items` | `array` | 매매 항목 목록 |
+
+### TradeListItem
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `serial_number` | `string` | 일련번호 |
+| `property_description` | `string` | 부동산의 표시 |
+| `rank_number` | `string` | 갑구 해당 순위번호 |
+| `registration_cause` | `string` | 등기원인 |
+| `correction_cause` | `string` | 경정원인 |
+
+---
+
+## 전체 응답 예시
+
+<Accordion title="토지 등기부등본 응답 예시">
+```json
+{
+  "document_type": "registry",
+  "parser_version": "1.4.0",
+  "parsed_at": "2026-02-23T12:00:00+00:00",
+  "data": {
+    "unique_number": "1184-2004-006616",
+    "property_type": "land",
+    "property_address": "전라남도 나주시 빛가람동 42-2",
+    "title_info": {
+      "property_type": "land",
+      "address": "전라남도 나주시 빛가람동 42-2",
+      "land_type": "전",
+      "land_area": "714㎡",
+      "land_entries": [
+        {
+          "display_number": "1",
+          "receipt_date": "2005년 06월 30일",
+          "location": "전라남도 나주시 빛가람동 42-2",
+          "land_type": "전",
+          "area": "714㎡",
+          "cause_and_other": "나주시빛가람동 42에서 분할",
+          "is_cancelled": false
+        }
+      ]
+    },
+    "section_a": [
+      {
+        "rank_number": "1",
+        "purposes": [{ "type": "소유권보존" }],
+        "receipt": { "date": "", "number": "" },
+        "cause": { "text": "전거", "date": null },
+        "details": {
+          "owners": [
+            { "name": "김철수", "share": null, "role": "소유자" }
+          ]
+        },
+        "is_cancelled": true,
+        "cancelled_by_rank": "2"
+      }
+    ],
+    "section_b": [
+      {
+        "rank_number": "1",
+        "purposes": [{ "type": "근저당권설정" }],
+        "receipt": { "date": "2006년 03월 22일", "number": "5678호" },
+        "cause": { "text": "설정계약", "date": "2006년 03월 22일" },
+        "details": {
+          "max_claim_amount": 50000000,
+          "debtors": [{ "name": "김철수" }],
+          "mortgagees": [{ "name": "농업협동조합중앙회" }]
+        },
+        "is_cancelled": false
+      }
+    ],
+    "trade_lists": [],
+    "major_summary": {
+      "property_type": "토지",
+      "address": "전라남도 나주시 빛가람동 42-2 전 714㎡",
+      "owners": [],
+      "rights": []
+    },
+    "jurisdiction": "광주지방법원 나주등기소",
+    "section_a_count": 1,
+    "section_b_count": 1,
+    "active_section_a_count": 0,
+    "active_section_b_count": 1
+  },
+  "confidence": {
+    "overall": 95,
+    "level": "높음"
+  }
+}
+```
+</Accordion>
