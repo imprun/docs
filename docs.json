@@ -56,7 +56,7 @@
         },
         {
           "anchor": "콘솔",
-          "href": "https://console.imprun.dev",
+          "href": "https://imprun.dev/console/api-keys",
           "icon": "terminal"
         }
       ]
@@ -72,7 +72,7 @@
     "primary": {
       "type": "button",
       "label": "Console",
-      "href": "https://console.imprun.dev"
+      "href": "https://imprun.dev/console/api-keys"
     }
   },
   "contextual": {
