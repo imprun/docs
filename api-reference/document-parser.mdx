@@ -237,8 +237,8 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
   "purpose": {
     "raw": "소유권이전",
     "normalized": "소유권이전",
-    "right_type": "ownership",
-    "action_type": "transfer",
+    "right_type": "ownership_transfer",
+    "action_type": "create",
     "target_rank": null,
     "target_type": null,
     "target_owner": null,
@@ -319,7 +319,7 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
 |------|------|------|
 | `raw` | `string` | PDF 원문 (예: `"소유권이전"`) |
 | `normalized` | `string` | 공백 제거 정규화 |
-| `right_type` | `string` | 권리종류 분류키 (예: `"ownership"`, `"mortgage"`, `"lease"`) |
+| `right_type` | `string` | 권리종류 분류키 (예: `"ownership_transfer"`, `"mortgage"`, `"lease"`) |
 | `action_type` | `string` | 액션 유형 (예: `"create"`, `"transfer"`, `"cancel"`) |
 | `target_rank` | `string \| null` | 대상 순위번호 (부기·말소 시) |
 | `target_type` | `string \| null` | 대상 권리종류 (을구 부기 시) |
@@ -330,16 +330,21 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
 
 | right_type | 설명 | 예시 |
 |------------|------|------|
-| `ownership` | 소유권 | 소유권보존, 소유권이전 |
-| `mortgage` | 근저당권 | 근저당권설정, 근저당권이전 |
-| `lease` | 임차권 | 주택임차권, 임차권설정 |
+| `ownership_transfer` | 소유권이전 | 소유권이전, 소유권일부이전 |
+| `ownership_preservation` | 소유권보존 | 소유권보존 |
+| `mortgage` | 근저당권/저당권 | 근저당권설정, 근저당권이전, 저당권설정 |
+| `lease` | 임차권 | 임차권등기, 임차권등기명령, 임차권설정 |
 | `jeonse` | 전세권 | 전세권설정 |
 | `superficies` | 지상권 | 지상권설정 |
-| `provisional` | 가등기 | 소유권이전청구권가등기 |
-| `seizure` | 압류·가압류 | 압류, 가압류 |
+| `easement` | 지역권 | 지역권설정 |
+| `provisional_registration` | 가등기 | 소유권이전청구권가등기 |
+| `seizure` | 압류 | 압류 |
+| `provisional_seizure` | 가압류 | 가압류 |
 | `auction` | 경매 | 임의경매개시결정, 강제경매개시결정 |
 | `trust` | 신탁 | 신탁 |
 | `injunction` | 가처분 | 처분금지가처분 |
+| `owner_change` | 등기명의인표시변경 | 등기명의인표시변경, 등기명의인주소변경 |
+| `supplementary` | 부기등기 | 부기등기 |
 | `generic` | 기타 | 분류 불가 항목 |
 
 ### action_type 분류
@@ -348,7 +353,9 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
 |-------------|------|
 | `create` | 신규 설정 (소유권보존, 근저당권설정 등) |
 | `transfer` | 이전 (소유권이전, 근저당권이전 등) |
+| `partial_transfer` | 일부이전 (소유권일부이전, 근저당권일부이전 등) |
 | `change` | 변경 (근저당권변경 등) |
+| `correct` | 경정 (등기명의인표시경정 등) |
 | `cancel` | 말소 (근저당권설정등기말소 등) |
 | `annotate` | 부기 (부기등기, 건물만에관한것임 등) |
 
