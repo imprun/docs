@@ -3,15 +3,19 @@ title: "토지 등기부등본"
 description: "토지(임야 포함) 등기부등본 파싱 결과 스키마"
 ---
 
-토지 등기부등본은 `property_type`이 `"land"`인 문서입니다. 지목, 면적, 토지의 표시, 매매목록 등 토지 고유 필드를 포함합니다.
+<Warning>
+  베타 API — 스키마가 변경될 수 있습니다.
+</Warning>
 
-## 표제부 (title_info)
+토지 등기부등본은 `profile.property_type`이 `"land"`인 문서입니다. 지목, 면적, 토지의 표시, 매매목록 등 토지 고유 필드를 포함합니다.
+
+## 표제부 (title)
 
 토지 등기부등본의 표제부는 **토지의 표시** 테이블을 포함합니다.
 
 ```json
 {
-  "title_info": {
+  "title": {
     "property_type": "land",
     "address": "전라남도 나주시 빛가람동 42-2",
     "land_type": "전",
@@ -52,7 +56,7 @@ description: "토지(임야 포함) 등기부등본 파싱 결과 스키마"
 | `is_cancelled` | `boolean` | 말소 여부 |
 
 <Note>
-  `display_number`에 `"(전 2)"`처럼 구번호가 포함될 수 있습니다. 이는 전산화 이전 등기 번호입니다.
+  `display_number`에 `"(전 2)"`처럼 구번호가 포함될 수 있습니다. 이는 전산이기(부동산등기규칙 제55조) 시 이전 번호를 병기한 것입니다.
 </Note>
 
 ---
@@ -61,39 +65,52 @@ description: "토지(임야 포함) 등기부등본 파싱 결과 스키마"
 
 토지 갑구의 특징:
 
-- **매매목록 참조**: 소유권이전 등기에서 `details.trade_list_number`로 매매목록을 참조합니다
+- **매매목록 참조**: 소유권이전 등기에서 `content.trade_list_number`로 매매목록을 참조합니다
 - **복수 필지 거래**: 하나의 매매로 여러 필지가 이전될 때 매매목록이 생성됩니다
 
 ```json
 {
+  "entry_id": "gap:p2:r12",
   "rank_number": "8",
-  "purposes": [
-    { "type": "소유권이전", "target_rank": null }
-  ],
+  "previous_rank": null,
+  "purpose": {
+    "raw": "소유권이전",
+    "normalized": "소유권이전",
+    "right_type": "ownership",
+    "action_type": "transfer",
+    "target_rank": null,
+    "sub_purposes": []
+  },
   "receipt": { "date": "2016년 10월 13일", "number": "33814호" },
   "cause": { "text": "매매", "date": "2016년 09월 22일" },
-  "details": {
-    "owners": [
+  "content": {
+    "persons": [
       {
         "name": "홍길동",
+        "role": "소유자",
         "resident_number": "800101-*******",
         "address": "경상북도 문경시 모전동 123-4",
-        "share": null,
-        "role": "소유자"
+        "share": null
       }
     ],
-    "claim_amount": null,
+    "amounts": [],
+    "shares": [],
     "trade_list_number": "2016-553"
   },
-  "is_cancelled": false
+  "status": { "is_cancelled": false },
+  "provenance": { "page_no": 2, "is_visual_cancelled": false },
+  "raw_text": "...",
+  "confidence": 0.95
 }
 ```
+
+갑구·을구의 상세 필드는 [공통 RegistryEntry 스키마](/api-reference/document-parser#갑구을구-section_asection_b)를 참고하세요.
 
 ---
 
 ## 매매목록 (trade_lists)
 
-토지에서 복수 필지를 한 거래로 처리할 때 존재합니다. 갑구 항목의 `details.trade_list_number`와 `list_number`로 연결됩니다.
+토지에서 복수 필지를 한 거래로 처리할 때 존재합니다. 갑구 항목의 `content.trade_list_number`와 `list_number`로 연결됩니다.
 
 ```json
 {
@@ -148,13 +165,31 @@ description: "토지(임야 포함) 등기부등본 파싱 결과 스키마"
 ```json
 {
   "document_type": "registry",
-  "parser_version": "1.4.0",
-  "parsed_at": "2026-02-23T12:00:00+00:00",
+  "parser_version": "1.5.0",
+  "parsed_at": "2026-02-25T12:00:00+00:00",
   "data": {
+    "meta": {
+      "parser_version": "1.5.0",
+      "parsed_at": "2026-02-25T12:00:00+00:00",
+      "document_id": null
+    },
+    "profile": {
+      "certificate_type": "full",
+      "include_cancellations": true,
+      "property_type": "land",
+      "layout_profile": "registry_v1_standard"
+    },
+    "source": {
+      "page_count": 5,
+      "text_length": 8240,
+      "pdf_text_based": true
+    },
     "unique_number": "1184-2004-006616",
-    "property_type": "land",
     "property_address": "전라남도 나주시 빛가람동 42-2",
-    "title_info": {
+    "jurisdiction": "광주지방법원 나주등기소",
+    "viewed_at": "2025년 04월 01일 13시 06분 16초",
+    "issued_at": null,
+    "title": {
       "property_type": "land",
       "address": "전라남도 나주시 빛가람동 42-2",
       "land_type": "전",
@@ -173,31 +208,62 @@ description: "토지(임야 포함) 등기부등본 파싱 결과 스키마"
     },
     "section_a": [
       {
+        "entry_id": "gap:p1:r2",
         "rank_number": "1",
-        "purposes": [{ "type": "소유권보존" }],
+        "previous_rank": null,
+        "purpose": {
+          "raw": "소유권보존",
+          "normalized": "소유권보존",
+          "right_type": "ownership",
+          "action_type": "create",
+          "sub_purposes": []
+        },
         "receipt": { "date": "", "number": "" },
         "cause": { "text": "전거", "date": null },
-        "details": {
-          "owners": [
-            { "name": "김철수", "share": null, "role": "소유자" }
-          ]
+        "content": {
+          "persons": [
+            { "name": "김철수", "role": "소유자", "share": null }
+          ],
+          "amounts": [],
+          "shares": []
         },
-        "is_cancelled": true,
-        "cancelled_by_rank": "2"
+        "status": {
+          "is_cancelled": true,
+          "cancelled_by_rank": "2",
+          "modifications": []
+        },
+        "provenance": { "page_no": 1, "is_visual_cancelled": true },
+        "raw_text": "...",
+        "confidence": 0.95
       }
     ],
     "section_b": [
       {
+        "entry_id": "eul:p3:r2",
         "rank_number": "1",
-        "purposes": [{ "type": "근저당권설정" }],
+        "purpose": {
+          "raw": "근저당권설정",
+          "normalized": "근저당권설정",
+          "right_type": "mortgage",
+          "action_type": "create",
+          "sub_purposes": []
+        },
         "receipt": { "date": "2006년 03월 22일", "number": "5678호" },
         "cause": { "text": "설정계약", "date": "2006년 03월 22일" },
-        "details": {
-          "max_claim_amount": 50000000,
-          "debtors": [{ "name": "김철수" }],
-          "mortgagees": [{ "name": "농업협동조합중앙회" }]
+        "content": {
+          "persons": [
+            { "name": "김철수", "role": "채무자" },
+            { "name": "농업협동조합중앙회", "role": "근저당권자" }
+          ],
+          "amounts": [
+            { "type": "채권최고액", "value": 50000000, "raw": "금50,000,000원" }
+          ],
+          "shares": []
         },
-        "is_cancelled": false
+        "status": { "is_cancelled": false, "modifications": [] },
+        "provenance": { "page_no": 3, "is_visual_cancelled": false },
+        "raw_text": "...",
+        "confidence": 0.92
       }
     ],
     "trade_lists": [],
@@ -207,11 +273,15 @@ description: "토지(임야 포함) 등기부등본 파싱 결과 스키마"
       "owners": [],
       "rights": []
     },
-    "jurisdiction": "광주지방법원 나주등기소",
-    "section_a_count": 1,
-    "section_b_count": 1,
-    "active_section_a_count": 0,
-    "active_section_b_count": 1
+    "diagnostics": {
+      "errors": [],
+      "warnings": [],
+      "metrics": {},
+      "sections_found": ["title", "section_a", "section_b", "major_summary"],
+      "rows_by_section": { "title": 2, "section_a": 11, "section_b": 12 },
+      "pages_by_section": {}
+    },
+    "raw_text": ""
   },
   "confidence": {
     "overall": 95,

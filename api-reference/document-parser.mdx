@@ -3,6 +3,11 @@ title: "등기부등본 PDF 파서"
 description: "건물·토지·집합건물 등기부등본 PDF를 구조화된 JSON으로 변환"
 ---
 
+<Warning>
+  이 API는 **베타** 단계입니다. 파서가 안정화되기 전까지 응답 스키마가 변경될 수 있습니다.
+  연동 시 `parser_version` 필드를 확인하여 버전별 분기 처리를 권장합니다.
+</Warning>
+
 등기부등본(등기사항전부증명서) PDF 파일을 업로드하면 **표제부·갑구·을구** 전체를 구조화된 JSON으로 변환합니다.
 
 ## 지원 문서 유형
@@ -22,18 +27,26 @@ description: "건물·토지·집합건물 등기부등본 PDF를 구조화된 J
 ## 엔드포인트
 
 ```
-POST /v1/document-parser/registry
+POST /document-parser/registry
 ```
 
 문서 유형(토지/건물/집합건물)은 PDF 내용에서 자동 판별됩니다. 별도 지정이 필요 없습니다.
 
 ### 요청
 
-```bash
-curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
+<CodeGroup>
+```bash Production
+curl -X POST https://prod.fn.imprun.dev/document-parser/registry \
   -H "Authorization: Bearer {keyId}.{secret}" \
   -F "file=@등기부등본.pdf"
 ```
+
+```bash Staging
+curl -X POST https://staging.fn.imprun.dev/document-parser/registry \
+  -H "Authorization: Bearer {keyId}.{secret}" \
+  -F "file=@등기부등본.pdf"
+```
+</CodeGroup>
 
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|:----:|------|
@@ -44,8 +57,8 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
 ```json
 {
   "document_type": "registry",
-  "parser_version": "1.4.0",
-  "parsed_at": "2026-02-23T12:00:00+00:00",
+  "parser_version": "1.5.0",
+  "parsed_at": "2026-02-25T12:00:00+00:00",
   "data": { ... },
   "confidence": {
     "overall": 91,
@@ -58,10 +71,16 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `document_type` | `string` | 항상 `"registry"` |
-| `parser_version` | `string` | 파서 버전 (현재 `"1.4.0"`) |
+| `parser_version` | `string` | 파서 버전. 현재 `"1.4.0"` (운영) 또는 `"1.5.0"` (스테이징) |
 | `parsed_at` | `string` | 파싱 수행 시각 (ISO 8601) |
-| `data` | `object` | 파싱 결과 본문. [RegistryData 스키마](#registrydata) 참조 |
+| `data` | `object` | 파싱 결과 본문. 버전에 따라 구조가 다름 — 아래 참조 |
 | `confidence` | `object` | 파싱 신뢰도 점수 |
+
+<Note>
+  현재 Production은 v1.4.0, Staging은 v1.5.0이 배포되어 있습니다.
+  v1.5.0이 안정화되면 Production에도 적용됩니다.
+  이 문서는 **v1.5.0 스키마**를 기준으로 작성되었습니다.
+</Note>
 
 ### 에러
 
@@ -74,56 +93,104 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
 
 ---
 
-## RegistryData
+## RegistryDocument
 
-`data` 필드에 담기는 최상위 구조입니다. 문서 유형에 따라 `title_info` 내부 필드가 달라집니다.
+`data` 필드에 담기는 v1.5.0 최상위 구조입니다.
 
 ```json
 {
+  "meta": {
+    "parser_version": "1.5.0",
+    "parsed_at": "2026-02-25T12:00:00+00:00",
+    "document_id": null
+  },
+  "profile": {
+    "certificate_type": "full",
+    "include_cancellations": true,
+    "property_type": "land",
+    "layout_profile": "registry_v1_standard"
+  },
+  "source": {
+    "page_count": 5,
+    "text_length": 8240,
+    "pdf_text_based": true
+  },
   "unique_number": "1184-2004-006616",
-  "property_type": "land",
   "property_address": "전라남도 나주시 빛가람동 42-2",
-  "title_info": { ... },
+  "jurisdiction": "광주지방법원 나주등기소",
+  "viewed_at": "2025년 04월 01일 13시 06분 16초",
+  "issued_at": null,
+  "title": { ... },
   "section_a": [ ... ],
   "section_b": [ ... ],
   "trade_lists": [ ... ],
   "major_summary": { ... },
-  "jurisdiction": "광주지방법원 나주등기소",
-  "viewed_at": "2025년 04월 01일 13시 06분 16초",
-  "section_a_count": 11,
-  "section_b_count": 12,
-  "active_section_a_count": 5,
-  "active_section_b_count": 3
+  "diagnostics": { ... },
+  "raw_text": ""
 }
 ```
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
+| `meta` | `object` | [DocumentMeta](#documentmeta) — 파서 메타데이터 |
+| `profile` | `object` | [DocumentProfile](#documentprofile) — 문서 프로파일 |
+| `source` | `object` | [SourceInfo](#sourceinfo) — 입력 소스 정보 |
 | `unique_number` | `string` | 고유번호 (`"NNNN-YYYY-NNNNNN"`) |
-| `property_type` | `string` | `"land"` \| `"building"` \| `"aggregate_building"` |
 | `property_address` | `string` | 부동산 소재지 주소 |
-| `title_info` | `object` | [표제부](#표제부-title_info) — 부동산 물리 정보 |
-| `section_a` | `array` | [갑구](#갑구-section_a) — 소유권에 관한 사항 |
-| `section_b` | `array` | [을구](#을구-section_b) — 소유권 이외의 권리 |
-| `trade_lists` | `array` | [매매목록](#매매목록) — 토지 복수 필지 거래 시 |
-| `major_summary` | `object \| null` | [주요등기사항 요약](#주요등기사항-요약) |
 | `jurisdiction` | `string \| null` | 관할등기소 |
 | `viewed_at` | `string \| null` | 열람일시 |
 | `issued_at` | `string \| null` | 발행일시 |
-| `section_a_count` | `integer` | 갑구 전체 항목 수 |
-| `section_b_count` | `integer` | 을구 전체 항목 수 |
-| `active_section_a_count` | `integer` | 갑구 유효(비말소) 항목 수 |
-| `active_section_b_count` | `integer` | 을구 유효(비말소) 항목 수 |
+| `verification_image` | `string \| null` | 검증 바코드 이미지 (Base64) |
+| `title` | `object` | [표제부](#표제부-title) — 부동산 물리 정보 |
+| `section_a` | `array` | [갑구](#갑구을구-section_asection_b) — 소유권에 관한 사항 |
+| `section_b` | `array` | [을구](#갑구을구-section_asection_b) — 소유권 이외의 권리 |
+| `trade_lists` | `array` | [매매목록](#매매목록) — 토지 복수 필지 거래 시 |
+| `major_summary` | `object \| null` | [주요등기사항 요약](#주요등기사항-요약) |
+| `diagnostics` | `object` | [ParseDiagnostics](#parsediagnostics) — 진단 정보 |
+| `raw_text` | `string` | 원본 전체 텍스트 (디버깅용) |
 
 <Note>
-  `property_type`에 따라 `title_info` 내부 필드가 달라집니다. 유형별 상세 스키마는 각 문서 유형 페이지를 참고하세요.
+  `profile.property_type`에 따라 `title` 내부 필드가 달라집니다. 유형별 상세 스키마는 각 문서 유형 페이지를 참고하세요.
 </Note>
 
 ---
 
-## 표제부 (title_info)
+## DocumentMeta
 
-부동산의 물리적 정보를 담습니다. `property_type`에 따라 사용되는 필드가 다릅니다.
+파서 버전과 파싱 시각 정보입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `parser_version` | `string` | 파서 버전 (예: `"1.5.0"`) |
+| `parsed_at` | `string` | 파싱 수행 시각 (ISO 8601) |
+| `document_id` | `string \| null` | PDF SHA256 해시 (선택) |
+
+## DocumentProfile
+
+문서의 유형과 특성을 나타냅니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `certificate_type` | `string` | `"full"` (등기사항전부증명서) \| `"partial"` (일부증명서) |
+| `include_cancellations` | `boolean` | 말소사항 포함 여부 |
+| `property_type` | `string` | `"land"` \| `"building"` \| `"aggregate_building"` |
+| `layout_profile` | `string` | 레이아웃 프로파일 (예: `"registry_v1_standard"`) |
+
+## SourceInfo
+
+입력 PDF의 물리적 정보입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `page_count` | `integer` | PDF 페이지 수 |
+| `text_length` | `integer` | 추출된 텍스트 총 문자 수 |
+| `pdf_text_based` | `boolean` | 텍스트 기반 PDF 여부 (`false`면 스캔 이미지) |
+
+---
+
+## 표제부 (title)
+
+부동산의 물리적 정보를 담습니다. `profile.property_type`에 따라 사용되는 필드가 다릅니다.
 
 ### 공통 필드
 
@@ -150,27 +217,33 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
 | `building_name` | - | - | O | 건물명 |
 | `exclusive_area` | - | - | O | 전용면적 (㎡) |
 | `land_right_ratio` | - | - | O | 대지권 비율 |
+| `land_right_area` | - | - | O | 대지 전체 면적 (㎡) |
 | `exclusive_part_entries` | - | - | O | 전유부분 항목 |
 | `land_right_entries` | - | - | O | 대지권 토지 항목 |
 | `land_right_ratio_entries` | - | - | O | 대지권 비율 항목 |
 
 ---
 
-## 갑구 (section_a)
+## 갑구·을구 (section_a/section_b)
 
-소유권에 관한 사항. 소유권이전, 가압류, 경매, 압류 등 소유권 관련 등기를 포함합니다.
+갑구는 소유권에 관한 사항, 을구는 소유권 이외의 권리(근저당권, 전세권, 임차권, 지상권 등)를 포함합니다.
+v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용합니다.
 
 ```json
 {
+  "entry_id": "gap:p2:r5",
   "rank_number": "3",
-  "purposes": [
-    {
-      "type": "소유권이전",
-      "target_rank": null,
-      "target_type": null,
-      "target_owner": null
-    }
-  ],
+  "previous_rank": null,
+  "purpose": {
+    "raw": "소유권이전",
+    "normalized": "소유권이전",
+    "right_type": "ownership",
+    "action_type": "transfer",
+    "target_rank": null,
+    "target_type": null,
+    "target_owner": null,
+    "sub_purposes": []
+  },
   "receipt": {
     "date": "2007년 09월 11일",
     "number": "14543호"
@@ -179,164 +252,118 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
     "text": "매매",
     "date": "2007년 08월 30일"
   },
-  "details": {
-    "owners": [
+  "content": {
+    "persons": [
       {
         "name": "홍길동",
+        "role": "소유자",
         "resident_number": "800101-*******",
         "address": "서울특별시 강남구 역삼동 123-4",
-        "share": null,
-        "role": "소유자"
+        "share": null
       }
     ],
-    "creditors": [],
-    "claim_amount": null,
+    "amounts": [],
+    "shares": [],
+    "collateral": null,
+    "term": null,
+    "lease": null,
+    "protected_right": null,
+    "prohibition_text": null,
     "trade_list_number": null,
-    "remarks": null
+    "annotation_date": null,
+    "notes_raw": null,
+    "cancels_cause": null
   },
-  "is_cancelled": false,
-  "cancelled_by_rank": null,
-  "cancellation_date": null,
-  "cancellation_cause": null
+  "status": {
+    "is_cancelled": false,
+    "cancelled_by_rank": null,
+    "cancellation_date": null,
+    "cancellation_cause": null,
+    "modifications": []
+  },
+  "provenance": {
+    "page_no": 2,
+    "bbox": null,
+    "merged_from": [],
+    "is_continuation": false,
+    "is_visual_cancelled": false
+  },
+  "raw_text": "...",
+  "confidence": 0.95
 }
 ```
 
-### 갑구 항목 필드
+### RegistryEntry
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
+| `entry_id` | `string` | 고유 식별자. 갑구: `"gap:p2:r5"`, 을구: `"eul:p3:r8"`. 형식: `{섹션}:p{페이지}:r{행번호}` |
 | `rank_number` | `string` | 순위번호. 주등기: `"1"`, 부기: `"1-1"` |
-| `purposes` | `array` | [등기목적](#등기목적-purposes) |
-| `receipt` | `object` | [접수 정보](#접수-receipt) |
-| `cause` | `object` | [등기원인](#등기원인-cause) |
-| `details` | `object` | 갑구 상세 — 아래 표 참조 |
-| `is_cancelled` | `boolean` | 말소 여부 |
-| `cancelled_by_rank` | `string \| null` | 말소시킨 등기의 순위번호 |
-| `cancellation_date` | `string \| null` | 말소 날짜 |
-| `cancellation_cause` | `string \| null` | 말소 원인 |
-
-### 갑구 details 필드
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `owners` | `array` | [소유자 목록](#소유자-ownerinfo). 소유권이전 시 |
-| `creditors` | `array` | [채권자 목록](#채권자-creditorinfo). 가압류·경매 시 |
-| `claim_amount` | `integer \| null` | 청구금액 (원) |
-| `disposition_authority` | `string \| null` | 처분청 (체납 압류 시) |
-| `trade_list_number` | `string \| null` | 매매목록 번호 |
-| `remarks` | `string \| null` | 기타사항 |
+| `previous_rank` | `string \| null` | 종전 순위번호. 전산이기 시 `"(전 3)"` → `"3"` |
+| `purpose` | `object` | [PurposeInfo](#purposeinfo) — 등기목적 |
+| `receipt` | `object` | [ReceiptInfo](#receiptinfo) — 접수 정보 |
+| `cause` | `object` | [CauseInfo](#causeinfo) — 등기원인 |
+| `content` | `object` | [EntryContent](#entrycontent) — 권리자및기타사항 |
+| `status` | `object` | [EntryStatus](#entrystatus) — 말소·변경 상태 |
+| `provenance` | `object` | [Provenance](#provenance) — 출처 추적 |
+| `raw_text` | `string` | 원본 셀 텍스트 |
+| `confidence` | `float` | 파싱 신뢰도 (0.0 ~ 1.0) |
 
 ---
 
-## 을구 (section_b)
+## PurposeInfo
 
-소유권 이외의 권리에 관한 사항. 근저당권, 전세권, 임차권, 지상권 등을 포함합니다.
-
-```json
-{
-  "rank_number": "1",
-  "purposes": [
-    {
-      "type": "근저당권설정",
-      "target_rank": null,
-      "target_type": null,
-      "target_owner": null
-    }
-  ],
-  "receipt": {
-    "date": "2007년 09월 11일",
-    "number": "14544호"
-  },
-  "cause": {
-    "text": "설정계약",
-    "date": "2007년 09월 11일"
-  },
-  "details": {
-    "max_claim_amount": 120000000,
-    "bond_amount": null,
-    "debtors": [
-      { "name": "홍길동", "resident_number": "800101-*******", "address": "서울특별시 강남구 역삼동 123-4" }
-    ],
-    "mortgagees": [
-      { "name": "주식회사 국민은행", "resident_number": "110111-0032157", "address": "서울특별시 중구 을지로2가" }
-    ],
-    "collateral_list": "제2007-194호",
-    "remarks": null
-  },
-  "is_cancelled": false
-}
-```
-
-### 을구 항목 필드
-
-갑구와 동일한 `rank_number`, `purposes`, `receipt`, `cause`, 말소 관련 필드를 가지며, `details`가 을구 전용 구조입니다.
-
-### 을구 details 필드
-
-등기 유형에 따라 해당하는 필드만 값이 설정됩니다.
-
-**근저당권:**
+등기목적 컬럼에서 추출됩니다. 원문 보존과 함께 정규화·분류 정보를 제공합니다.
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `max_claim_amount` | `integer \| null` | 채권최고액 (원) |
-| `bond_amount` | `integer \| null` | 채권액 (원) |
-| `debtors` | `array` | 채무자 목록 ([OwnerInfo](#소유자-ownerinfo)) |
-| `mortgagees` | `array` | 근저당권자 목록 ([CreditorInfo](#채권자-creditorinfo)) |
-
-**임차권·전세권:**
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `deposit_amount` | `integer \| null` | 보증금/전세금 (원) |
-| `monthly_rent` | `integer \| null` | 차임/월세 (원) |
-| `lessee` | `object \| null` | 임차인 (name, resident_number, address) |
-| `lease_area` | `string \| null` | 임차 면적 |
-| `lease_term` | `object \| null` | 기간 (contract_date, fixed_date 등) |
-
-**지상권:**
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `purpose` | `string \| null` | 지상권 목적 |
-| `scope` | `string \| null` | 지상권 범위 |
-| `duration` | `string \| null` | 존속기간 |
-| `land_rent` | `string \| null` | 지료 |
-
-**공동담보:**
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `collateral_list` | `string \| null` | 공동담보목록 번호 |
-| `collateral_items` | `array \| null` | 인라인 공동담보 항목 |
-
----
-
-## 공통 구조체
-
-### 등기목적 (purposes)
-
-등기목적 컬럼에서 추출됩니다. 단일 등기는 배열에 1개, 복합말소는 N개 원소를 가집니다.
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `type` | `string` | 등기유형 (예: `"소유권이전"`, `"근저당권설정등기말소"`) |
-| `target_rank` | `string \| null` | 대상 순위번호 (부기등기 시) |
-| `target_type` | `string \| null` | 대상 등기유형 (을구 부기 시) |
+| `raw` | `string` | PDF 원문 (예: `"소유권이전"`) |
+| `normalized` | `string` | 공백 제거 정규화 |
+| `right_type` | `string` | 권리종류 분류키 (예: `"ownership"`, `"mortgage"`, `"lease"`) |
+| `action_type` | `string` | 액션 유형 (예: `"create"`, `"transfer"`, `"cancel"`) |
+| `target_rank` | `string \| null` | 대상 순위번호 (부기·말소 시) |
+| `target_type` | `string \| null` | 대상 권리종류 (을구 부기 시) |
 | `target_owner` | `string \| null` | 대상 소유자명 (갑구 부기 시) |
+| `sub_purposes` | `array` | 복합 목적 시 하위 [PurposeInfo](#purposeinfo) 목록 |
+
+### right_type 분류
+
+| right_type | 설명 | 예시 |
+|------------|------|------|
+| `ownership` | 소유권 | 소유권보존, 소유권이전 |
+| `mortgage` | 근저당권 | 근저당권설정, 근저당권이전 |
+| `lease` | 임차권 | 주택임차권, 임차권설정 |
+| `jeonse` | 전세권 | 전세권설정 |
+| `superficies` | 지상권 | 지상권설정 |
+| `provisional` | 가등기 | 소유권이전청구권가등기 |
+| `seizure` | 압류·가압류 | 압류, 가압류 |
+| `auction` | 경매 | 임의경매개시결정, 강제경매개시결정 |
+| `trust` | 신탁 | 신탁 |
+| `injunction` | 가처분 | 처분금지가처분 |
+| `generic` | 기타 | 분류 불가 항목 |
+
+### action_type 분류
+
+| action_type | 설명 |
+|-------------|------|
+| `create` | 신규 설정 (소유권보존, 근저당권설정 등) |
+| `transfer` | 이전 (소유권이전, 근저당권이전 등) |
+| `change` | 변경 (근저당권변경 등) |
+| `cancel` | 말소 (근저당권설정등기말소 등) |
+| `annotate` | 부기 (부기등기, 건물만에관한것임 등) |
 
 <Accordion title="말소 부기등기 예시">
   순위번호 5번의 경매등기를 말소하는 경우:
   ```json
   {
-    "purposes": [
-      {
-        "type": "임의경매개시결정등기말소",
-        "target_rank": "5",
-        "target_type": null,
-        "target_owner": null
-      }
-    ]
+    "purpose": {
+      "raw": "5번 임의경매개시결정등기말소",
+      "normalized": "5번임의경매개시결정등기말소",
+      "right_type": "auction",
+      "action_type": "cancel",
+      "target_rank": "5",
+      "sub_purposes": []
+    }
   }
   ```
 </Accordion>
@@ -345,49 +372,215 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
   1번 근저당권과 2번 지상권을 동시에 말소:
   ```json
   {
-    "purposes": [
-      { "type": "근저당권설정등기말소", "target_rank": "1" },
-      { "type": "지상권설정등기말소", "target_rank": "2" }
-    ]
+    "purpose": {
+      "raw": "1번근저당권설정, 2번지상권설정등기말소",
+      "normalized": "1번근저당권설정,2번지상권설정등기말소",
+      "right_type": "mortgage",
+      "action_type": "cancel",
+      "target_rank": "1",
+      "sub_purposes": [
+        {
+          "raw": "1번근저당권설정등기말소",
+          "right_type": "mortgage",
+          "action_type": "cancel",
+          "target_rank": "1"
+        },
+        {
+          "raw": "2번지상권설정등기말소",
+          "right_type": "superficies",
+          "action_type": "cancel",
+          "target_rank": "2"
+        }
+      ]
+    }
   }
   ```
 </Accordion>
 
-### 접수 (receipt)
+---
+
+## ReceiptInfo
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `date` | `string` | 접수일자 (예: `"2007년 09월 11일"`) |
 | `number` | `string` | 접수번호 (예: `"14543호"`) |
 
-### 등기원인 (cause)
+## CauseInfo
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `text` | `string` | 등기원인 (예: `"매매"`, `"상속"`, `"설정계약"`) |
 | `date` | `string \| null` | 등기원인 발생일 |
 
-### 소유자 (OwnerInfo)
+---
 
-갑구 `details.owners`, 을구 `details.debtors`에 사용됩니다.
+## EntryContent
+
+권리자및기타사항 컬럼의 구조화된 데이터입니다. 권리종류에 따라 해당 필드만 값이 설정됩니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `persons` | `array` | [PersonInfo](#personinfo) 목록. 모든 인물을 `role`로 구분 |
+| `amounts` | `array` | [AmountInfo](#amountinfo) 목록. 모든 금액을 `type`으로 구분 |
+| `shares` | `array` | [ShareInfo](#shareinfo) 목록. 공유 지분 정보 |
+| `collateral` | `object \| null` | [CollateralInfo](#collateralinfo). 공동담보 정보 |
+| `term` | `object \| null` | [TermInfo](#terminfo). 용익물권 기간·범위 |
+| `lease` | `object \| null` | [LeaseInfo](#leaseinfo). 임대차 정보 |
+| `protected_right` | `string \| null` | 피보전권리 (가처분 시) |
+| `prohibition_text` | `string \| null` | 금지사항 (가처분 시) |
+| `trade_list_number` | `string \| null` | 매매목록 참조번호 |
+| `annotation_date` | `string \| null` | 부기일자 |
+| `notes_raw` | `string \| null` | 구조화 안 된 잔여 텍스트 (전산이기, 신탁원부 등) |
+| `cancels_cause` | `string \| null` | 말소 등기원인 (해지/해제 등) |
+
+---
+
+## PersonInfo
+
+모든 인물 정보를 `role` 필드로 구분합니다.
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `name` | `string` | 성명 또는 법인명 |
+| `role` | `string` | 역할 — 아래 표 참조 |
 | `resident_number` | `string \| null` | 주민/법인등록번호 (마스킹됨) |
 | `address` | `string \| null` | 주소 |
 | `share` | `string \| null` | 지분 (공유 시, 예: `"3분의 1"`) |
-| `role` | `string \| null` | 역할: `"소유자"`, `"공유자"`, `"수탁자"` 등 |
 
-### 채권자 (CreditorInfo)
+### role 값
 
-갑구 `details.creditors`, 을구 `details.mortgagees`에 사용됩니다.
+| role | 설명 | 사용 섹션 |
+|------|------|----------|
+| `소유자` | 단독 소유자 | 갑구 |
+| `공유자` | 공유 소유자 | 갑구 |
+| `수탁자` | 신탁 수탁자 | 갑구 |
+| `채무자` | 채무자 | 을구 |
+| `근저당권자` | 근저당권자 | 을구 |
+| `전세권자` | 전세권자 | 을구 |
+| `임차인` | 임차인 | 을구 |
+| `지상권자` | 지상권자 | 을구 |
+| `채권자` | 가압류 채권자 등 | 갑구·을구 |
+| `권리자` | 기타 권리자 | 갑구·을구 |
+
+## AmountInfo
+
+모든 금액 정보를 `type` 필드로 구분합니다.
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `name` | `string` | 성명 또는 법인명 |
-| `resident_number` | `string \| null` | 주민/법인/부동산등기용 등록번호 |
-| `address` | `string \| null` | 주소 |
+| `type` | `string` | 금액 유형 — 아래 표 참조 |
+| `value` | `integer` | 금액 (원) |
+| `raw` | `string` | 원본 텍스트 (예: `"금 300,000,000원"`) |
+
+### type 값
+
+| type | 설명 |
+|------|------|
+| `채권최고액` | 근저당권 채권최고액 |
+| `채권액` | 채권액 |
+| `보증금` | 전세보증금 또는 임차보증금 |
+| `차임` | 월차임 |
+| `청구금액` | 가압류 청구금액 |
+| `거래가액` | 매매 거래가액 |
+
+## ShareInfo
+
+공유 지분 정보입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `owner_name` | `string` | 소유자명 |
+| `raw` | `string` | 원본 표현 (예: `"2분의 1"`) |
+| `numerator` | `integer \| null` | 분자 |
+| `denominator` | `integer \| null` | 분모 |
+
+---
+
+## CollateralInfo
+
+공동담보 정보입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `list_number` | `string \| null` | 공동담보목록 참조번호 (예: `"제2007-194호"`) |
+| `items` | `array` | [CollateralItem](#collateralitem) 목록 |
+
+### CollateralItem
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `property_type` | `string` | 부동산 종류 (예: `"토지"`, `"건물"`, `"임야"`) |
+| `location` | `string` | 소재지 |
+| `area` | `string \| null` | 면적 (예: `"1078㎡"`) |
+| `type` | `string` | `"listed"` (목록 기재) \| `"addition"` (추가) |
+| `reference` | `string \| null` | 참조 (예: `"을구 제1번의 근저당권"`) |
+
+## TermInfo
+
+용익물권(지상권 등)의 기간·범위 정보입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `purpose` | `string \| null` | 목적 |
+| `scope` | `string \| null` | 범위 |
+| `duration` | `string \| null` | 존속기간 |
+| `land_rent` | `string \| null` | 지료 |
+
+## LeaseInfo
+
+임대차 정보입니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `contract_date` | `string \| null` | 계약일자 |
+| `resident_registration_date` | `string \| null` | 주민등록일자 |
+| `possession_start_date` | `string \| null` | 점유개시일 |
+| `fixed_date` | `string \| null` | 확정일자 |
+| `lease_area` | `string \| null` | 임차 면적 |
+
+---
+
+## EntryStatus
+
+항목의 말소·변경 상태를 추적합니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `is_cancelled` | `boolean` | 말소 여부 |
+| `cancelled_by_rank` | `string \| null` | 말소시킨 등기의 순위번호 |
+| `cancellation_date` | `string \| null` | 말소 날짜 |
+| `cancellation_cause` | `string \| null` | 말소 원인 |
+| `modifications` | `array` | [Modification](#modification) 목록. 변경·경정 이력 |
+
+### Modification
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `by_rank` | `string` | 변경을 야기한 순위번호 |
+| `type` | `string` | `"change"` \| `"correct"` \| `"annotate"` |
+| `changed_fields_guess` | `array` | 변경된 필드 추측 목록 |
+| `raw` | `string` | 원본 텍스트 |
+
+---
+
+## Provenance
+
+항목의 출처를 추적합니다. PDF에서의 물리적 위치와 파싱 과정 정보를 포함합니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `page_no` | `integer` | PDF 페이지 번호 (1-based) |
+| `bbox` | `array \| null` | 바운딩 박스 `[left, top, right, bottom]` (PDF 좌표) |
+| `merged_from` | `array` | 병합된 원본 행 위치 목록 (예: `["p2:r15", "p3:r1"]`). 페이지 분할 복원 시 |
+| `is_continuation` | `boolean` | 이전 페이지에서 이어진 항목 여부 |
+| `is_visual_cancelled` | `boolean` | PDF에서 시각적 취소선 감지 여부 |
+
+<Note>
+  `is_visual_cancelled`는 PDF에서 관찰된 사실(취소선 유무)을 기록합니다.
+  `status.is_cancelled`는 등기목적 분석에 의한 법적 판단입니다.
+  두 값은 대부분 일치하지만, 드물게 차이가 날 수 있습니다.
+</Note>
 
 ---
 
@@ -411,7 +604,25 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
 }
 ```
 
-갑구 항목의 `details.trade_list_number`와 `trade_lists[].list_number`로 연결됩니다.
+갑구 항목의 `content.trade_list_number`와 `trade_lists[].list_number`로 연결됩니다.
+
+### TradeList
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `list_number` | `string` | 목록번호 (예: `"2016-553"`) |
+| `trade_amount` | `integer \| null` | 거래가액 (원) |
+| `items` | `array` | [TradeListItem](#tradelistitem) 목록 |
+
+### TradeListItem
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `serial_number` | `string` | 일련번호 |
+| `property_description` | `string` | 부동산의 표시 |
+| `rank_number` | `string` | 갑구 해당 순위번호 |
+| `registration_cause` | `string` | 등기원인 |
+| `correction_cause` | `string` | 경정원인 |
 
 ---
 
@@ -426,9 +637,10 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
     "address": "전라남도 나주시 빛가람동 42-2 전 714㎡",
     "owners": [
       {
-        "name": "홍길동 (소유자)",
+        "name": "홍길동",
         "resident_number": "800101-*******",
         "final_share": "단독소유",
+        "address": "서울특별시 강남구 역삼동 123",
         "rank_number": "3"
       }
     ],
@@ -439,13 +651,86 @@ curl -X POST https://prod.fn.imprun.dev/v1/document-parser/registry \
         "receipt_date": "2007년09월11일",
         "receipt_number": "제14544호",
         "creditor": "주식회사 국민은행",
-        "max_claim_amount": 120000000
+        "max_claim_amount": 120000000,
+        "is_cancelled": false
       }
     ]
   }
 }
 ```
 
+### MajorSummary
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `property_type` | `string` | 부동산 유형 |
+| `address` | `string` | 소재지 |
+| `owners` | `array` | [MajorSummaryOwnerEntry](#majorsummaryownerentry) 목록 |
+| `rights` | `array` | [MajorSummaryRightEntry](#majorsummaryrightentry) 목록 |
+
+### MajorSummaryOwnerEntry
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `name` | `string` | 등기명의인명 |
+| `resident_number` | `string \| null` | 주민/법인등록번호 |
+| `final_share` | `string \| null` | 최종 지분 |
+| `address` | `string \| null` | 주소 |
+| `rank_number` | `string` | 순위번호 |
+
+### MajorSummaryRightEntry
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `rank_number` | `string` | 순위번호 |
+| `registration_purpose` | `string` | 등기목적 |
+| `receipt_date` | `string` | 접수일자 |
+| `receipt_number` | `string` | 접수번호 |
+| `target_owner` | `string \| null` | 대상 소유자 |
+| `creditor` | `string \| null` | 권리자명 |
+| `max_claim_amount` | `integer \| null` | 채권최고액 |
+| `bond_amount` | `integer \| null` | 채권액 |
+| `deposit_amount` | `integer \| null` | 보증금 |
+| `purpose` | `string \| null` | 기타 목적 |
+| `is_cancelled` | `boolean` | 말소 여부 |
+
 <Warning>
   주요등기사항 요약은 참고용이며 법적 효력이 없습니다. 정확한 권리관계는 갑구·을구 원본 데이터를 확인하세요.
 </Warning>
+
+---
+
+## ParseDiagnostics
+
+파싱 과정의 진단 정보입니다. 디버깅과 품질 확인에 사용됩니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `errors` | `array` | 파싱 에러 메시지 목록 |
+| `warnings` | `array` | 파싱 경고 메시지 목록 |
+| `metrics` | `object` | 파싱 메트릭 (처리 시간 등) |
+| `sections_found` | `array` | 감지된 섹션 목록 (예: `["title", "section_a", "section_b"]`) |
+| `rows_by_section` | `object` | 섹션별 추출 행 수 |
+| `pages_by_section` | `object` | 섹션별 페이지 번호 목록 |
+
+---
+
+## 버전 호환성
+
+### v1.4.0 → v1.5.0 주요 변경
+
+| 항목 | v1.4.0 | v1.5.0 |
+|------|--------|--------|
+| 갑구/을구 모델 | `SectionAEntry` / `SectionBEntry` 분리 | `RegistryEntry` 통합 |
+| 등기목적 | `purposes: List[RegistrationPurpose]` | `purpose: PurposeInfo` (단일 객체, `sub_purposes`로 복합 처리) |
+| 인물 정보 | `owners`, `creditors`, `debtors`, `mortgagees` 분산 | `persons[]` + `role` 통합 |
+| 금액 정보 | `max_claim_amount`, `deposit_amount` 등 분산 | `amounts[]` + `type` 통합 |
+| 최상위 구조 | `RegistryData` | `RegistryDocument` (meta, profile, source, diagnostics 추가) |
+| 출처 추적 | 없음 | `provenance` (page_no, bbox, merged_from) |
+| 항목 식별 | 없음 | `entry_id` (예: `"gap:p2:r5"`) |
+| 항목 신뢰도 | 없음 | `confidence` (0.0 ~ 1.0) |
+
+<Note>
+  v1.4.0 응답을 받는 경우 `purposes` (배열)와 `details` (갑구/을구별 상이) 필드를 사용합니다.
+  정확한 v1.4.0 스키마가 필요하면 별도 문의해 주세요.
+</Note>
