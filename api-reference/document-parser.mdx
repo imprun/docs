@@ -71,14 +71,12 @@ curl -X POST https://staging.fn.imprun.dev/document-parser/registry \
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `document_type` | `string` | 항상 `"registry"` |
-| `parser_version` | `string` | 파서 버전. 현재 `"1.4.0"` (운영) 또는 `"1.5.0"` (스테이징) |
+| `parser_version` | `string` | 파서 버전. 현재 `"1.5.0"` |
 | `parsed_at` | `string` | 파싱 수행 시각 (ISO 8601) |
 | `data` | `object` | 파싱 결과 본문. 버전에 따라 구조가 다름 — 아래 참조 |
 | `confidence` | `object` | 파싱 신뢰도 점수 |
 
 <Note>
-  현재 Production은 v1.4.0, Staging은 v1.5.0이 배포되어 있습니다.
-  v1.5.0이 안정화되면 Production에도 적용됩니다.
   이 문서는 **v1.5.0 스키마**를 기준으로 작성되었습니다.
 </Note>
 
@@ -237,8 +235,8 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
   "purpose": {
     "raw": "소유권이전",
     "normalized": "소유권이전",
-    "right_type": "ownership_transfer",
-    "action_type": "create",
+    "right_type": "소유권이전",
+    "action_type": "설정",
     "target_rank": null,
     "target_type": null,
     "target_owner": null,
@@ -319,8 +317,8 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
 |------|------|------|
 | `raw` | `string` | PDF 원문 (예: `"소유권이전"`) |
 | `normalized` | `string` | 공백 제거 정규화 |
-| `right_type` | `string` | 권리종류 분류키 (예: `"ownership_transfer"`, `"mortgage"`, `"lease"`) |
-| `action_type` | `string` | 액션 유형 (예: `"create"`, `"transfer"`, `"cancel"`) |
+| `right_type` | `string` | 권리종류 분류키 (예: `"소유권이전"`, `"근저당권"`, `"임차권"`) |
+| `action_type` | `string` | 액션 유형 (예: `"설정"`, `"이전"`, `"말소"`) |
 | `target_rank` | `string \| null` | 대상 순위번호 (부기·말소 시) |
 | `target_type` | `string \| null` | 대상 권리종류 (을구 부기 시) |
 | `target_owner` | `string \| null` | 대상 소유자명 (갑구 부기 시) |
@@ -330,34 +328,34 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
 
 | right_type | 설명 | 예시 |
 |------------|------|------|
-| `ownership_transfer` | 소유권이전 | 소유권이전, 소유권일부이전 |
-| `ownership_preservation` | 소유권보존 | 소유권보존 |
-| `mortgage` | 근저당권/저당권 | 근저당권설정, 근저당권이전, 저당권설정 |
-| `lease` | 임차권 | 임차권등기, 임차권등기명령, 임차권설정 |
-| `jeonse` | 전세권 | 전세권설정 |
-| `superficies` | 지상권 | 지상권설정 |
-| `easement` | 지역권 | 지역권설정 |
-| `provisional_registration` | 가등기 | 소유권이전청구권가등기 |
-| `seizure` | 압류 | 압류 |
-| `provisional_seizure` | 가압류 | 가압류 |
-| `auction` | 경매 | 임의경매개시결정, 강제경매개시결정 |
-| `trust` | 신탁 | 신탁 |
-| `injunction` | 가처분 | 처분금지가처분 |
-| `owner_change` | 등기명의인표시변경 | 등기명의인표시변경, 등기명의인주소변경 |
-| `supplementary` | 부기등기 | 부기등기 |
-| `generic` | 기타 | 분류 불가 항목 |
+| `소유권이전` | 소유권이전 | 소유권이전, 소유권일부이전 |
+| `소유권보존` | 소유권보존 | 소유권보존 |
+| `근저당권` | 근저당권/저당권 | 근저당권설정, 근저당권이전, 저당권설정 |
+| `임차권` | 임차권 | 임차권등기, 임차권등기명령, 임차권설정 |
+| `전세권` | 전세권 | 전세권설정 |
+| `지상권` | 지상권 | 지상권설정 |
+| `지역권` | 지역권 | 지역권설정 |
+| `가등기` | 가등기 | 소유권이전청구권가등기 |
+| `압류` | 압류 | 압류 |
+| `가압류` | 가압류 | 가압류 |
+| `경매` | 경매 | 임의경매개시결정, 강제경매개시결정 |
+| `신탁` | 신탁 | 신탁 |
+| `가처분` | 가처분 | 처분금지가처분 |
+| `등기명의인표시변경` | 등기명의인표시변경 | 등기명의인표시변경, 등기명의인주소변경 |
+| `부기등기` | 부기등기 | 부기등기 |
+| `미분류` | 기타 | 분류 불가 항목 |
 
 ### action_type 분류
 
 | action_type | 설명 |
 |-------------|------|
-| `create` | 신규 설정 (소유권보존, 근저당권설정 등) |
-| `transfer` | 이전 (소유권이전, 근저당권이전 등) |
-| `partial_transfer` | 일부이전 (소유권일부이전, 근저당권일부이전 등) |
-| `change` | 변경 (근저당권변경 등) |
-| `correct` | 경정 (등기명의인표시경정 등) |
-| `cancel` | 말소 (근저당권설정등기말소 등) |
-| `annotate` | 부기 (부기등기, 건물만에관한것임 등) |
+| `설정` | 신규 설정 (소유권보존, 근저당권설정 등) |
+| `이전` | 이전 (소유권이전, 근저당권이전 등) |
+| `일부이전` | 일부이전 (소유권일부이전, 근저당권일부이전 등) |
+| `변경` | 변경 (근저당권변경 등) |
+| `경정` | 경정 (등기명의인표시경정 등) |
+| `말소` | 말소 (근저당권설정등기말소 등) |
+| `부기` | 부기 (부기등기, 건물만에관한것임 등) |
 
 <Accordion title="말소 부기등기 예시">
   순위번호 5번의 경매등기를 말소하는 경우:
@@ -366,8 +364,8 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
     "purpose": {
       "raw": "5번 임의경매개시결정등기말소",
       "normalized": "5번임의경매개시결정등기말소",
-      "right_type": "auction",
-      "action_type": "cancel",
+      "right_type": "경매",
+      "action_type": "말소",
       "target_rank": "5",
       "sub_purposes": []
     }
@@ -382,20 +380,20 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
     "purpose": {
       "raw": "1번근저당권설정, 2번지상권설정등기말소",
       "normalized": "1번근저당권설정,2번지상권설정등기말소",
-      "right_type": "mortgage",
-      "action_type": "cancel",
+      "right_type": "근저당권",
+      "action_type": "말소",
       "target_rank": "1",
       "sub_purposes": [
         {
           "raw": "1번근저당권설정등기말소",
-          "right_type": "mortgage",
-          "action_type": "cancel",
+          "right_type": "근저당권",
+          "action_type": "말소",
           "target_rank": "1"
         },
         {
           "raw": "2번지상권설정등기말소",
-          "right_type": "superficies",
-          "action_type": "cancel",
+          "right_type": "지상권",
+          "action_type": "말소",
           "target_rank": "2"
         }
       ]
@@ -720,24 +718,3 @@ v1.5.0에서는 갑구와 을구가 동일한 `RegistryEntry` 구조를 사용�
 | `rows_by_section` | `object` | 섹션별 추출 행 수 |
 | `pages_by_section` | `object` | 섹션별 페이지 번호 목록 |
 
----
-
-## 버전 호환성
-
-### v1.4.0 → v1.5.0 주요 변경
-
-| 항목 | v1.4.0 | v1.5.0 |
-|------|--------|--------|
-| 갑구/을구 모델 | `SectionAEntry` / `SectionBEntry` 분리 | `RegistryEntry` 통합 |
-| 등기목적 | `purposes: List[RegistrationPurpose]` | `purpose: PurposeInfo` (단일 객체, `sub_purposes`로 복합 처리) |
-| 인물 정보 | `owners`, `creditors`, `debtors`, `mortgagees` 분산 | `persons[]` + `role` 통합 |
-| 금액 정보 | `max_claim_amount`, `deposit_amount` 등 분산 | `amounts[]` + `type` 통합 |
-| 최상위 구조 | `RegistryData` | `RegistryDocument` (meta, profile, source, diagnostics 추가) |
-| 출처 추적 | 없음 | `provenance` (page_no, bbox, merged_from) |
-| 항목 식별 | 없음 | `entry_id` (예: `"gap:p2:r5"`) |
-| 항목 신뢰도 | 없음 | `confidence` (0.0 ~ 1.0) |
-
-<Note>
-  v1.4.0 응답을 받는 경우 `purposes` (배열)와 `details` (갑구/을구별 상이) 필드를 사용합니다.
-  정확한 v1.4.0 스키마가 필요하면 별도 문의해 주세요.
-</Note>

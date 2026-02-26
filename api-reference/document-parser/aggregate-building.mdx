@@ -169,18 +169,18 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
   "purpose": {
     "raw": "소유권이전 및 신탁등기말소",
     "normalized": "소유권이전및신탁등기말소",
-    "right_type": "ownership_transfer",
-    "action_type": "create",
+    "right_type": "소유권이전",
+    "action_type": "설정",
     "sub_purposes": [
       {
         "raw": "소유권이전",
-        "right_type": "ownership_transfer",
-        "action_type": "create"
+        "right_type": "소유권이전",
+        "action_type": "설정"
       },
       {
         "raw": "신탁등기말소",
-        "right_type": "trust",
-        "action_type": "cancel",
+        "right_type": "신탁",
+        "action_type": "말소",
         "target_rank": "2"
       }
     ]
@@ -290,8 +290,8 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
         "purpose": {
           "raw": "소유권보존",
           "normalized": "소유권보존",
-          "right_type": "ownership_preservation",
-          "action_type": "create"
+          "right_type": "소유권보존",
+          "action_type": "설정"
         },
         "receipt": { "date": "2004년 03월 15일", "number": "6789호" },
         "cause": { "text": "보존등기", "date": null },
@@ -317,8 +317,8 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
         "purpose": {
           "raw": "소유권이전",
           "normalized": "소유권이전",
-          "right_type": "ownership_transfer",
-          "action_type": "create"
+          "right_type": "소유권이전",
+          "action_type": "설정"
         },
         "receipt": { "date": "2010년 07월 20일", "number": "23456호" },
         "cause": { "text": "매매", "date": "2010년 07월 15일" },
@@ -342,8 +342,8 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
         "purpose": {
           "raw": "근저당권설정",
           "normalized": "근저당권설정",
-          "right_type": "mortgage",
-          "action_type": "create"
+          "right_type": "근저당권",
+          "action_type": "설정"
         },
         "receipt": { "date": "2010년 07월 20일", "number": "23457호" },
         "cause": { "text": "설정계약", "date": "2010년 07월 20일" },
