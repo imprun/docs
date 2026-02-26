@@ -3,11 +3,21 @@ title: "API Reference"
 description: "imprun.dev API 엔드포인트 레퍼런스"
 ---
 
-## Base URL
+<Warning>
+  이 API는 현재 **베타** 단계입니다. 응답 스키마가 사전 공지 없이 변경될 수 있습니다.
+  프로덕션 연동 시 `parser_version` 필드를 확인하여 버전별 분기 처리를 권장합니다.
+</Warning>
 
-```
-https://prod.fn.imprun.dev
-```
+## 환경
+
+| 환경 | Base URL | 용도 |
+|------|----------|------|
+| **Production** | `https://prod.fn.imprun.dev` | 운영 서비스 |
+| **Staging** | `https://staging.fn.imprun.dev` | 베타 기능 테스트, 개발용 |
+
+<Note>
+  Staging 환경은 최신 개발 빌드가 배포됩니다. 새로운 파서 버전이나 스키마 변경이 먼저 적용되므로, 사전 검증 용도로 활용하세요.
+</Note>
 
 ## 인증
 
@@ -27,6 +37,7 @@ Authorization: Bearer {keyId}.{secret}
 | `401` | 인증 실패 |
 | `403` | 잔액 부족 또는 계정 정지 |
 | `413` | 파일 크기 초과 |
+| `422` | 파싱 실패 (PDF에서 내용을 인식할 수 없음) |
 | `500` | 서버 내부 오류 |
 
 ## API 목록

@@ -3,15 +3,19 @@ title: "집합건물 등기부등본"
 description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 결과 스키마"
 ---
 
-집합건물 등기부등본은 `property_type`이 `"aggregate_building"`인 문서입니다. 아파트, 오피스텔, 상가 등 구분소유 건물에 해당하며, **전유부분**과 **대지권** 정보를 포함합니다.
+<Warning>
+  베타 API — 스키마가 변경될 수 있습니다.
+</Warning>
 
-## 표제부 (title_info)
+집합건물 등기부등본은 `profile.property_type`이 `"aggregate_building"`인 문서입니다. 아파트, 오피스텔, 상가 등 구분소유 건물에 해당하며, **전유부분**과 **대지권** 정보를 포함합니다.
+
+## 표제부 (title)
 
 집합건물의 표제부는 1동 건물 정보, 전유부분, 대지권 토지, 대지권 비율의 4개 섹션으로 구성됩니다.
 
 ```json
 {
-  "title_info": {
+  "title": {
     "property_type": "aggregate_building",
     "address": "경기도 고양시 일산동구 백석동 1234",
     "road_address": "경기도 고양시 일산동구 중앙로 456",
@@ -147,11 +151,50 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
 
 ## 갑구·을구
 
-집합건물 등기부등본의 갑구·을구는 [공통 스키마](/api-reference/document-parser#갑구-section_a)와 동일합니다. 집합건물 특유의 등기 유형은 다음과 같습니다:
+집합건물 등기부등본의 갑구·을구는 [공통 RegistryEntry 스키마](/api-reference/document-parser#갑구을구-section_asection_b)와 동일합니다.
+
+집합건물 특유의 등기 유형:
 
 - **신탁**: 을구에 신탁 원부 번호가 기재됨
 - **가처분**: 분양권 관련 처분금지 가처분
 - **근저당권부채권압류**: 을구 근저당권에 대한 채권 압류
+- **공유자전원지분전부이전**: 갑구에서 공유자 전원의 지분을 한꺼번에 이전
+
+### 신탁 + 소유권이전 복합 예시
+
+```json
+{
+  "entry_id": "gap:p2:r8",
+  "rank_number": "3",
+  "purpose": {
+    "raw": "소유권이전 및 신탁등기말소",
+    "normalized": "소유권이전및신탁등기말소",
+    "right_type": "소유권이전",
+    "action_type": "설정",
+    "sub_purposes": [
+      {
+        "raw": "소유권이전",
+        "right_type": "소유권이전",
+        "action_type": "설정"
+      },
+      {
+        "raw": "신탁등기말소",
+        "right_type": "신탁",
+        "action_type": "말소",
+        "target_rank": "2"
+      }
+    ]
+  },
+  "content": {
+    "persons": [
+      { "name": "손흥민", "role": "소유자" }
+    ],
+    "amounts": [],
+    "shares": []
+  },
+  "status": { "is_cancelled": false }
+}
+```
 
 ---
 
@@ -161,13 +204,31 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
 ```json
 {
   "document_type": "registry",
-  "parser_version": "1.4.0",
-  "parsed_at": "2026-02-23T12:00:00+00:00",
+  "parser_version": "1.5.0",
+  "parsed_at": "2026-02-25T12:00:00+00:00",
   "data": {
+    "meta": {
+      "parser_version": "1.5.0",
+      "parsed_at": "2026-02-25T12:00:00+00:00",
+      "document_id": null
+    },
+    "profile": {
+      "certificate_type": "full",
+      "include_cancellations": true,
+      "property_type": "aggregate_building",
+      "layout_profile": "registry_v1_standard"
+    },
+    "source": {
+      "page_count": 4,
+      "text_length": 6100,
+      "pdf_text_based": true
+    },
     "unique_number": "1345-2003-020551",
-    "property_type": "aggregate_building",
     "property_address": "경기도 고양시 일산동구 백석동 1234",
-    "title_info": {
+    "jurisdiction": "의정부지방법원 고양등기소",
+    "viewed_at": null,
+    "issued_at": null,
+    "title": {
       "property_type": "aggregate_building",
       "address": "경기도 고양시 일산동구 백석동 1234",
       "road_address": "경기도 고양시 일산동구 중앙로 456",
@@ -186,8 +247,10 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
       "exclusive_part_entries": [
         {
           "display_number": "1",
+          "receipt_date": "",
           "building_number": "제15층 제1501호",
           "building_detail": "철근콘크리트구조 84.97㎡",
+          "cause_and_other": "",
           "is_cancelled": false
         }
       ],
@@ -196,7 +259,8 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
           "display_number": "1",
           "location": "경기도 고양시 일산동구 백석동 1234",
           "land_type": "대",
-          "area": "25455.4㎡"
+          "area": "25455.4㎡",
+          "cause_and_other": ""
         }
       ],
       "land_right_ratio_entries": [
@@ -204,49 +268,99 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
           "display_number": "1",
           "land_right_type": "1 소유권대지권",
           "land_right_ratio": "25455.4분의 67.06",
+          "cause_and_other": "",
+          "is_cancelled": false
+        }
+      ],
+      "building_entries": [
+        {
+          "display_number": "1",
+          "receipt_date": "",
+          "location_or_number": "경기도 고양시 일산동구 백석동 1234",
+          "building_detail": "철근콘크리트구조 슬래브지붕 25층 아파트\n1층 456.78㎡",
+          "cause_and_other": "",
           "is_cancelled": false
         }
       ]
     },
     "section_a": [
       {
+        "entry_id": "gap:p2:r2",
         "rank_number": "1",
-        "purposes": [{ "type": "소유권보존" }],
+        "purpose": {
+          "raw": "소유권보존",
+          "normalized": "소유권보존",
+          "right_type": "소유권보존",
+          "action_type": "설정"
+        },
         "receipt": { "date": "2004년 03월 15일", "number": "6789호" },
         "cause": { "text": "보존등기", "date": null },
-        "details": {
-          "owners": [
-            { "name": "박지성", "share": null, "role": "소유자" }
-          ]
+        "content": {
+          "persons": [
+            { "name": "박지성", "role": "소유자", "share": null }
+          ],
+          "amounts": [],
+          "shares": []
         },
-        "is_cancelled": true,
-        "cancelled_by_rank": "2"
+        "status": {
+          "is_cancelled": true,
+          "cancelled_by_rank": "2",
+          "modifications": []
+        },
+        "provenance": { "page_no": 2, "is_visual_cancelled": true },
+        "raw_text": "...",
+        "confidence": 0.95
       },
       {
+        "entry_id": "gap:p2:r5",
         "rank_number": "2",
-        "purposes": [{ "type": "소유권이전" }],
+        "purpose": {
+          "raw": "소유권이전",
+          "normalized": "소유권이전",
+          "right_type": "소유권이전",
+          "action_type": "설정"
+        },
         "receipt": { "date": "2010년 07월 20일", "number": "23456호" },
         "cause": { "text": "매매", "date": "2010년 07월 15일" },
-        "details": {
-          "owners": [
-            { "name": "손흥민", "share": null, "role": "소유자" }
-          ]
+        "content": {
+          "persons": [
+            { "name": "손흥민", "role": "소유자", "share": null }
+          ],
+          "amounts": [],
+          "shares": []
         },
-        "is_cancelled": false
+        "status": { "is_cancelled": false, "modifications": [] },
+        "provenance": { "page_no": 2, "is_visual_cancelled": false },
+        "raw_text": "...",
+        "confidence": 0.95
       }
     ],
     "section_b": [
       {
+        "entry_id": "eul:p3:r2",
         "rank_number": "1",
-        "purposes": [{ "type": "근저당권설정" }],
+        "purpose": {
+          "raw": "근저당권설정",
+          "normalized": "근저당권설정",
+          "right_type": "근저당권",
+          "action_type": "설정"
+        },
         "receipt": { "date": "2010년 07월 20일", "number": "23457호" },
         "cause": { "text": "설정계약", "date": "2010년 07월 20일" },
-        "details": {
-          "max_claim_amount": 300000000,
-          "debtors": [{ "name": "손흥민" }],
-          "mortgagees": [{ "name": "주식회사 신한은행" }]
+        "content": {
+          "persons": [
+            { "name": "손흥민", "role": "채무자" },
+            { "name": "주식회사 신한은행", "role": "근저당권자" }
+          ],
+          "amounts": [
+            { "type": "채권최고액", "value": 300000000, "raw": "금300,000,000원" }
+          ],
+          "shares": []
         },
-        "is_cancelled": false
+        "status": { "is_cancelled": false, "modifications": [] },
+        "provenance": { "page_no": 3, "is_visual_cancelled": false },
+        "raw_text": "...",
+        "confidence": 0.93
       }
     ],
     "trade_lists": [],
@@ -255,7 +369,7 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
       "address": "경기도 고양시 일산동구 백석동 1234",
       "owners": [
         {
-          "name": "손흥민 (소유자)",
+          "name": "손흥민",
           "final_share": "단독소유",
           "rank_number": "2"
         }
@@ -265,15 +379,20 @@ description: "아파트·오피스텔 등 집합건물 등기부등본 파싱 �
           "rank_number": "1",
           "registration_purpose": "근저당권설정",
           "creditor": "주식회사 신한은행",
-          "max_claim_amount": 300000000
+          "max_claim_amount": 300000000,
+          "is_cancelled": false
         }
       ]
     },
-    "jurisdiction": "의정부지방법원 고양등기소",
-    "section_a_count": 2,
-    "section_b_count": 1,
-    "active_section_a_count": 1,
-    "active_section_b_count": 1
+    "diagnostics": {
+      "errors": [],
+      "warnings": [],
+      "metrics": {},
+      "sections_found": ["title", "section_a", "section_b", "major_summary"],
+      "rows_by_section": {},
+      "pages_by_section": {}
+    },
+    "raw_text": ""
   },
   "confidence": {
     "overall": 94,
