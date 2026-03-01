@@ -1,0 +1,88 @@
+---
+title: "Mobile SDK 개요"
+description: "imprun Mobile SDK로 안티 스크래핑이 적용된 사이트의 로그인 자동화를 구현하세요"
+---
+
+# Mobile SDK
+
+imprun Mobile SDK는 안티 스크래핑이 적용된 사이트에서 **로그인 자동화와 세션 추출**을 수행하는 Android SDK입니다.
+
+## 어떤 문제를 해결하나요?
+
+홈택스 같은 공공 사이트는 Eversafe, DataDome 등 안티 스크래핑 솔루션을 적용하여
+서버사이드 자동화(Puppeteer, Playwright, HTTP 직접 호출)를 차단합니다.
+
+imprun Mobile SDK는 **실제 모바일 브라우저 환경(WebView)**에서 자동화를 수행하므로:
+
+- 안티 스크래핑 솔루션이 생성하는 동적 토큰을 별도로 추출할 필요 없음
+- 사이트 UI 변경에도 유연하게 대응 가능
+- 실제 브라우저와 동일한 환경에서 동작하여 높은 안정성 제공
+
+## 동작 방식
+
+SDK는 보이지 않는 WebView에서 사이트를 로드하고, 자동화 스크립트를 실행하여
+로그인을 수행합니다. 고객 앱에서는 간단한 API 호출만으로 이 과정을 시작할 수 있습니다.
+
+```
+앱 → SDK 초기화 → 로그인 실행 → 세션 정보 반환
+```
+
+1. **SDK 초기화**: `AutomationEngine`을 생성하고 설정을 적용합니다
+2. **로그인 실행**: 사이트 코드(`"HMTAX"`)와 인증 정보를 전달합니다
+3. **자동 처리**: SDK가 내부적으로 페이지 로드, 폼 입력, 로그인 버튼 클릭을 수행합니다
+4. **결과 반환**: 로그인 성공 시 세션 정보(사용자명, 쿠키 등)를 콜백으로 전달합니다
+
+```kotlin
+engine.executeLogin("HMTAX", "ID_PW", credentials) { result ->
+    result.onSuccess { session ->
+        // session.userName, session.cookies 등 활용
+    }
+    result.onFailure { error ->
+        // 에러 처리
+    }
+}
+```
+
+## 지원 사이트
+
+| 사이트 | 코드 | 로그인 유형 | 설명 |
+|--------|------|------------|------|
+| **홈택스** (모바일) | `HMTAX` | `ID_PW` | 아이디/비밀번호 로그인 |
+
+<Note>
+  추가 사이트 지원이 필요하시면 [contact@imprun.dev](mailto:contact@imprun.dev)로 문의해 주세요.
+</Note>
+
+## 반환 데이터
+
+로그인 성공 시 `SessionInfo` 객체가 반환됩니다:
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `siteCode` | String | 사이트 코드 (예: `"HMTAX"`) |
+| `userId` | String? | 로그인한 사용자 아이디 |
+| `userName` | String? | 사용자명 (일부 마스킹) |
+| `taxPayerNo` | String? | 납세자식별번호 (마스킹) |
+| `cookies` | Map | 인증 쿠키 (JSESSIONID 등) |
+| `timestamp` | Long | 로그인 시각 (epoch ms) |
+| `rawResponse` | String | 원시 JSON 응답 |
+
+## 보안
+
+- **HTTPS 전용**: 모든 통신은 HTTPS로만 수행됩니다
+- **WebView 격리**: SDK의 WebView는 앱의 다른 WebView와 완전히 분리됩니다
+- **데이터 암호화**: 내부 저장소는 AES-256-GCM으로 암호화됩니다
+- **비밀번호 비저장**: SDK는 비밀번호를 저장하지 않으며, 로그인 수행 후 메모리에서 즉시 삭제합니다
+
+## 시스템 요구사항
+
+| 항목 | 요구사항 |
+|------|---------|
+| **Android 버전** | API 24 (Android 7.0) 이상 |
+| **권장 Android 버전** | API 28 (Android 9.0) 이상 |
+| **필수 권한** | `INTERNET` |
+| **의존 라이브러리** | AndroidX WebKit 1.10.0+, OkHttp 4, Gson |
+
+## 다음 단계
+
+SDK를 앱에 통합하려면 [고객 통합 가이드](/mobile-sdk/integration-guide)를 참조하세요.

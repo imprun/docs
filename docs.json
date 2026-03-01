@@ -30,6 +30,23 @@
         ]
       },
       {
+        "tab": "Mobile SDK",
+        "groups": [
+          {
+            "group": "개요",
+            "pages": [
+              "mobile-sdk/overview"
+            ]
+          },
+          {
+            "group": "통합 가이드",
+            "pages": [
+              "mobile-sdk/integration-guide"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "API Reference",
         "groups": [
           {
