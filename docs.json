@@ -54,6 +54,12 @@
             ]
           },
           {
+            "group": "자격증명",
+            "pages": [
+              "api-reference/credential-management"
+            ]
+          },
+          {
             "group": "Temporal Workflows",
             "pages": [
               "api-reference/workflows"
