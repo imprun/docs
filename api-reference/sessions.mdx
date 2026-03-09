@@ -1,0 +1,464 @@
+---
+title: '세션 관리'
+description: '외부 서비스 로그인 세션을 생성·관리하는 API'
+---
+
+외부 서비스(홈택스, 위하고 등)에 로그인하여 세션을 생성하고 관리합니다.
+생성된 세션은 [워크플로우 실행](/api-reference/workflows)이나 상품 API에서 인증 수단으로 사용됩니다.
+
+## 인증
+
+모든 엔드포인트는 [API 키 인증](/authentication)이 필요합니다.
+
+```bash
+X-API-Key: {keyId}.{secret}
+```
+
+## 세션 상태
+
+| 상태 | 설명 |
+|------|------|
+| `waiting` | 사용자 입력(로그인, OTP 등) 대기 중 |
+| `active` | 로그인 성공, 사용 가능 |
+| `expired` | 만료됨, 새 세션 생성 필요 |
+
+```
+waiting ──(challenge 응답)──→ active ──(시간 경과)──→ expired
+    │                            │
+    └──(타임아웃)──→ expired      └──(삭제)──→ (제거)
+```
+
+## 지원 사이트
+
+| 사이트 | 코드 | 로그인 방식 |
+|--------|------|------------|
+| 홈택스 | `HOMETAX` | Challenge-Response (HITL) |
+| 위하고 | `WEHAGO` | 자격증명 자동 로그인 |
+
+---
+
+## 세션 생성
+
+<ParamField path="POST" type="/v2/sessions" />
+
+새 세션을 생성합니다. 사이트와 인증 방식에 따라 즉시 활성화되거나 Challenge 응답이 필요할 수 있습니다.
+
+### 요청 본문
+
+<ParamField body="site_code" type="string" required>
+  사이트 코드 (`HOMETAX`, `WEHAGO`)
+</ParamField>
+<ParamField body="credential_id" type="string">
+  자격증명 ID (`cred-` 접두사). 자동 로그인 시 필수. [자격증명 관리](/api-reference/credential-management)에서 등록한 ID를 사용합니다.
+</ParamField>
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://prod.fn.imprun.dev/v2/sessions \
+  -H "X-API-Key: {keyId}.{secret}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "site_code": "WEHAGO",
+    "credential_id": "cred-49fb8ddd-9d38-49fb-85dd-90176517640e"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://prod.fn.imprun.dev/v2/sessions', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': '{keyId}.{secret}',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    site_code: 'WEHAGO',
+    credential_id: 'cred-49fb8ddd-9d38-49fb-85dd-90176517640e'
+  })
+});
+
+const session = await response.json();
+console.log(session.session_id, session.status);
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://prod.fn.imprun.dev/v2/sessions',
+    headers={'X-API-Key': '{keyId}.{secret}'},
+    json={
+        'site_code': 'WEHAGO',
+        'credential_id': 'cred-49fb8ddd-9d38-49fb-85dd-90176517640e'
+    }
+)
+
+session = response.json()
+print(session['session_id'], session['status'])
+```
+</CodeGroup>
+
+### 응답 — `201 Created` (자동 로그인 성공)
+
+자격증명으로 자동 로그인에 성공한 경우 즉시 활성 세션을 반환합니다.
+
+```json
+{
+  "session_id": "sess_a1b2c3d4",
+  "site_code": "WEHAGO",
+  "status": "active",
+  "expires_at": "2026-03-10T06:00:00Z"
+}
+```
+
+<ResponseField name="session_id" type="string">세션 ID (`sess_` 접두사)</ResponseField>
+<ResponseField name="site_code" type="string">사이트 코드</ResponseField>
+<ResponseField name="status" type="string">세션 상태 (`active`)</ResponseField>
+<ResponseField name="expires_at" type="string">만료 시각 (RFC3339)</ResponseField>
+
+### 응답 — `202 Accepted` (Challenge 필요)
+
+사용자 입력이 필요한 경우 `waiting` 상태와 함께 Challenge 정보를 반환합니다.
+
+```json
+{
+  "session_id": "sess_x9y8z7",
+  "site_code": "HOMETAX",
+  "status": "waiting",
+  "challenge": {
+    "id": "ch_abc123",
+    "type": "session_required",
+    "message": "HOMETAX 로그인이 필요합니다",
+    "expires_at": "2026-03-10T01:05:00Z"
+  }
+}
+```
+
+<ResponseField name="session_id" type="string">세션 ID (`sess_` 접두사)</ResponseField>
+<ResponseField name="site_code" type="string">사이트 코드</ResponseField>
+<ResponseField name="status" type="string">세션 상태 (`waiting`)</ResponseField>
+<ResponseField name="challenge" type="object">Challenge 정보</ResponseField>
+<ResponseField name="challenge.id" type="string">Challenge ID (`ch_` 접두사)</ResponseField>
+<ResponseField name="challenge.type" type="string">Challenge 유형 (`session_required`, `otp` 등)</ResponseField>
+<ResponseField name="challenge.message" type="string">사용자에게 표시할 메시지</ResponseField>
+<ResponseField name="challenge.expires_at" type="string">Challenge 만료 시각 (RFC3339, 기본 5분)</ResponseField>
+
+<Note>
+  `202 Accepted` 응답을 받으면 [Challenge 응답](#challenge-응답) API로 인증 정보를 전달해야 합니다.
+  Challenge는 5분 후 만료되며, 만료 시 세션은 `expired` 상태로 전환됩니다.
+</Note>
+
+---
+
+## 세션 조회
+
+<ParamField path="GET" type="/v2/sessions/{session_id}" />
+
+세션의 현재 상태를 조회합니다.
+
+### 경로 파라미터
+
+<ParamField path="session_id" type="string" required>
+  세션 ID (`sess_` 접두사)
+</ParamField>
+
+<CodeGroup>
+```bash cURL
+curl https://prod.fn.imprun.dev/v2/sessions/sess_a1b2c3d4 \
+  -H "X-API-Key: {keyId}.{secret}"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://prod.fn.imprun.dev/v2/sessions/sess_a1b2c3d4',
+  { headers: { 'X-API-Key': '{keyId}.{secret}' } }
+);
+
+const session = await response.json();
+console.log(session.status);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://prod.fn.imprun.dev/v2/sessions/sess_a1b2c3d4',
+    headers={'X-API-Key': '{keyId}.{secret}'}
+)
+
+session = response.json()
+print(session['status'])
+```
+</CodeGroup>
+
+### 응답 — `200 OK`
+
+```json
+{
+  "session_id": "sess_a1b2c3d4",
+  "site_code": "WEHAGO",
+  "status": "active",
+  "expires_at": "2026-03-10T06:00:00Z"
+}
+```
+
+<ResponseField name="session_id" type="string">세션 ID</ResponseField>
+<ResponseField name="site_code" type="string">사이트 코드</ResponseField>
+<ResponseField name="status" type="string">세션 상태 (`active`, `waiting`, `expired`)</ResponseField>
+<ResponseField name="expires_at" type="string">만료 시각 (RFC3339). `waiting` 상태에서는 Challenge 만료 시각.</ResponseField>
+<ResponseField name="challenge" type="object">현재 대기 중인 Challenge (status가 `waiting`일 때만 포함)</ResponseField>
+
+---
+
+## Challenge 응답
+
+<ParamField path="POST" type="/v2/sessions/{session_id}/challenge" />
+
+`waiting` 상태의 세션에 인증 정보를 전달합니다. 성공하면 세션이 `active`로 전환됩니다.
+
+### 경로 파라미터
+
+<ParamField path="session_id" type="string" required>
+  세션 ID (`sess_` 접두사)
+</ParamField>
+
+### 요청 본문
+
+<ParamField body="challenge_id" type="string" required>
+  Challenge ID (`ch_` 접두사). 세션 생성 또는 조회 응답에서 받은 값.
+</ParamField>
+<ParamField body="data" type="object" required>
+  Challenge 유형에 따른 인증 데이터. 사이트별로 필요한 필드가 다릅니다.
+</ParamField>
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://prod.fn.imprun.dev/v2/sessions/sess_x9y8z7/challenge \
+  -H "X-API-Key: {keyId}.{secret}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "challenge_id": "ch_abc123",
+    "data": {
+      "cookies": {
+        "JSESSIONID": "ABC123DEF456",
+        "TEERsessionID": "XYZ789"
+      }
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://prod.fn.imprun.dev/v2/sessions/sess_x9y8z7/challenge',
+  {
+    method: 'POST',
+    headers: {
+      'X-API-Key': '{keyId}.{secret}',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      challenge_id: 'ch_abc123',
+      data: {
+        cookies: {
+          JSESSIONID: 'ABC123DEF456',
+          TEERsessionID: 'XYZ789'
+        }
+      }
+    })
+  }
+);
+
+const session = await response.json();
+console.log(session.status); // "active"
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://prod.fn.imprun.dev/v2/sessions/sess_x9y8z7/challenge',
+    headers={'X-API-Key': '{keyId}.{secret}'},
+    json={
+        'challenge_id': 'ch_abc123',
+        'data': {
+            'cookies': {
+                'JSESSIONID': 'ABC123DEF456',
+                'TEERsessionID': 'XYZ789'
+            }
+        }
+    }
+)
+
+session = response.json()
+print(session['status'])  # "active"
+```
+</CodeGroup>
+
+### 응답 — `200 OK`
+
+```json
+{
+  "session_id": "sess_x9y8z7",
+  "site_code": "HOMETAX",
+  "status": "active",
+  "expires_at": "2026-03-10T06:00:00Z"
+}
+```
+
+<ResponseField name="session_id" type="string">세션 ID</ResponseField>
+<ResponseField name="site_code" type="string">사이트 코드</ResponseField>
+<ResponseField name="status" type="string">세션 상태 (`active`)</ResponseField>
+<ResponseField name="expires_at" type="string">세션 만료 시각 (RFC3339)</ResponseField>
+
+---
+
+## 세션 삭제
+
+<ParamField path="DELETE" type="/v2/sessions/{session_id}" />
+
+세션을 즉시 삭제합니다. 삭제된 세션은 더 이상 사용할 수 없습니다.
+
+### 경로 파라미터
+
+<ParamField path="session_id" type="string" required>
+  세션 ID (`sess_` 접두사)
+</ParamField>
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://prod.fn.imprun.dev/v2/sessions/sess_a1b2c3d4 \
+  -H "X-API-Key: {keyId}.{secret}"
+```
+
+```javascript JavaScript
+await fetch(
+  'https://prod.fn.imprun.dev/v2/sessions/sess_a1b2c3d4',
+  {
+    method: 'DELETE',
+    headers: { 'X-API-Key': '{keyId}.{secret}' }
+  }
+);
+```
+
+```python Python
+import requests
+
+requests.delete(
+    'https://prod.fn.imprun.dev/v2/sessions/sess_a1b2c3d4',
+    headers={'X-API-Key': '{keyId}.{secret}'}
+)
+```
+</CodeGroup>
+
+### 응답 — `204 No Content`
+
+<Warning>
+  삭제된 세션을 사용하는 워크플로우는 `SESSION_EXPIRED` 에러로 실패합니다.
+  삭제 전 진행 중인 작업이 없는지 확인하세요.
+</Warning>
+
+---
+
+## 전체 흐름 예시
+
+### 자동 로그인 (Wehago)
+
+자격증명이 등록되어 있으면 세션이 자동으로 생성됩니다.
+
+```python
+import requests
+
+BASE = 'https://prod.fn.imprun.dev'
+HEADERS = {'X-API-Key': '{keyId}.{secret}'}
+
+# 1. 세션 생성 (자동 로그인)
+resp = requests.post(f'{BASE}/v2/sessions', headers=HEADERS, json={
+    'site_code': 'WEHAGO',
+    'credential_id': 'cred-49fb8ddd-9d38-49fb-85dd-90176517640e'
+})
+session = resp.json()
+assert session['status'] == 'active'
+
+# 2. 세션 ID로 워크플로우 실행
+resp = requests.post(f'{BASE}/v2/workflows', headers=HEADERS, json={
+    'type': 'scraping',
+    'params': {
+        'site_code': 'WEHAGO',
+        'session_id': session['session_id'],
+        'group': 'financial',
+        'endpoint': 'balance-sheet',
+        'from_date': '20250101',
+        'to_date': '20250131'
+    }
+})
+```
+
+### Challenge-Response (Hometax)
+
+사용자 입력이 필요한 경우 Challenge에 응답합니다.
+
+```python
+import requests
+import time
+
+BASE = 'https://prod.fn.imprun.dev'
+HEADERS = {'X-API-Key': '{keyId}.{secret}'}
+
+# 1. 세션 생성 요청
+resp = requests.post(f'{BASE}/v2/sessions', headers=HEADERS, json={
+    'site_code': 'HOMETAX'
+})
+session = resp.json()
+
+if session['status'] == 'waiting':
+    challenge = session['challenge']
+    print(f"[{challenge['type']}] {challenge['message']}")
+
+    # 2. 사용자가 외부에서 로그인 후 쿠키 전달
+    cookies = get_cookies_from_user()  # 앱/브라우저에서 수집
+
+    resp = requests.post(
+        f'{BASE}/v2/sessions/{session["session_id"]}/challenge',
+        headers=HEADERS,
+        json={
+            'challenge_id': challenge['id'],
+            'data': {'cookies': cookies}
+        }
+    )
+    session = resp.json()
+
+assert session['status'] == 'active'
+print(f"세션 활성화: {session['session_id']}")
+```
+
+---
+
+## 오류 코드
+
+| HTTP | 코드 | 설명 |
+|------|------|------|
+| 400 | `INVALID_REQUEST` | 필수 필드 누락 또는 잘못된 요청 |
+| 400 | `INVALID_SITE_CODE` | 지원하지 않는 사이트 코드 |
+| 400 | `CHALLENGE_MISMATCH` | Challenge ID가 현재 대기 중인 Challenge와 불일치 |
+| 401 | `UNAUTHORIZED` | API 키 누락 또는 인증 실패 |
+| 404 | `SESSION_NOT_FOUND` | 세션을 찾을 수 없음 |
+| 404 | `CREDENTIAL_NOT_FOUND` | 자격증명을 찾을 수 없음 |
+| 408 | `CHALLENGE_TIMEOUT` | Challenge 응답 시간 초과 (5분) |
+| 409 | `SESSION_NOT_WAITING` | 세션이 `waiting` 상태가 아닌데 Challenge 응답 시도 |
+| 410 | `SESSION_EXPIRED` | 세션이 만료됨 |
+| 422 | `AUTHENTICATION_FAILED` | 로그인 실패 (자격증명 오류) |
+| 500 | `INTERNAL_ERROR` | 서버 내부 오류 |
+
+## 요금
+
+세션 관리 API는 **무료**입니다. 세션을 사용하는 [워크플로우 실행](/api-reference/workflows) 시에만 과금됩니다.
+
+## 다음 단계
+
+<CardGroup cols={2}>
+  <Card title="자격증명 등록" icon="key" href="/api-reference/credential-management">
+    자동 로그인에 사용할 자격증명을 등록합니다.
+  </Card>
+  <Card title="워크플로우 실행" icon="play" href="/api-reference/workflows">
+    활성 세션으로 스크래핑 워크플로우를 실행합니다.
+  </Card>
+</CardGroup>

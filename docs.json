@@ -60,6 +60,12 @@
             ]
           },
           {
+            "group": "세션",
+            "pages": [
+              "api-reference/sessions"
+            ]
+          },
+          {
             "group": "Temporal Workflows",
             "pages": [
               "api-reference/workflows"
