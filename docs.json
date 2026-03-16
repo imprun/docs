@@ -45,7 +45,7 @@
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "API 가이드",
         "groups": [
           {
             "group": "개요",
@@ -76,15 +76,6 @@
               "api-reference/document-parser/building",
               "api-reference/document-parser/aggregate-building"
             ]
-          }
-        ]
-      },
-      {
-        "tab": "사이트 API",
-        "groups": [
-          {
-            "group": "wehago",
-            "openapi": "https://imprun.dev/api/v1/openapi/wehago"
           }
         ]
       }
