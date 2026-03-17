@@ -78,6 +78,15 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "API 레퍼런스",
+        "groups": [
+          {
+            "group": "wehago",
+            "openapi": "https://imprun.dev/api/v1/openapi/wehago"
+          }
+        ]
       }
     ],
     "global": {
